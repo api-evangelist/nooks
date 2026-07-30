@@ -1,19 +1,45 @@
 aid: nooks
 name: Nooks
-description: 'Nooks is a company surfaced as a portfolio company of kleiner-perkins and added to the API
-  Evangelist network as a stub for enrichment. Sector: ai. This profile is a lead awaiting the enrichment
-  pipeline.'
+description: >-
+  Nooks is an AI-native sales engagement platform positioned as "The Agent Workspace for
+  Intelligent Outbound," where sales representatives and AI agents collaborate on prospecting,
+  sequencing, and dialing inside a single workspace. Its products include an AI Parallel Dialer,
+  AI Sequencing, AI Coaching, and Signals Intelligence, aimed at helping revenue and SDR teams
+  build more pipeline with less manual work. Nooks is backed by Kleiner Perkins, runs its
+  application at app.nooks.in, and maintains a SafeBase trust center with SOC 2 Type 2, SOC 3,
+  ISO/IEC 27001:2022, GDPR, CCPA, and EU-US DPF coverage plus a Bugcrowd responsible-disclosure
+  program. As of this enrichment pass Nooks does not publish a public developer API, SDKs, or
+  API reference; it integrates with CRMs and sales tools (Salesforce, HubSpot, and others) rather
+  than a self-service API surface.
 url: https://raw.githubusercontent.com/api-evangelist/nooks/refs/heads/main/apis.yml
 x-type: company
 x-source: kleiner-perkins-portfolio
 x-tier: stub
 x-tier-reason: portfolio-lead
+accessModel:
+  pricing: unknown
+  onboarding: unknown
+  trial: false
+  try_now: false
+  public: false
+  label: Unknown
+  confidence: low
+  source: []
+  generated: '2026-07-22'
+  method: derived
 specificationVersion: '0.20'
 created: '2026-07-17'
-modified: '2026-07-17'
+modified: '2026-07-20'
+image: https://cdn.prod.website-files.com/697107c16c913fd77cf0aacd/69b2e1b1625a9e823d1edf5f_6995c9952aa828323555083c_OG%20Image%20(1).png
 tags:
 - Company
-- Ai
+- AI
+- Sales Engagement
+- Sales Dialer
+- AI SDR
+- Outbound Sales
+- Sales Coaching
+- Revenue Operations
 apis: []
 maintainers:
 - FN: Kin Lane
@@ -23,3 +49,28 @@ maintainers:
 common:
 - type: Website
   url: https://www.nooks.ai
+- type: Login
+  url: https://app.nooks.in/login
+- type: Pricing
+  url: https://www.nooks.ai/pricing
+- type: Blog
+  url: https://www.nooks.ai/blog
+- type: TermsOfService
+  url: https://www.nooks.ai/terms
+- type: PrivacyPolicy
+  url: https://www.nooks.ai/privacy-policy
+- type: TrustCenter
+  url: security/nooks-trust-center.yml
+- type: Compliance
+  url: https://trust.nooks.ai/
+- type: Security
+  url: https://www.nooks.ai/responsible-disclosure-process
+- type: VulnerabilityDisclosure
+  url: security/nooks-vulnerability-disclosure.yml
+- type: DomainSecurity
+  url: security/nooks-domain-security.yml
+x-enrichment:
+  date: '2026-07-20'
+  status: enriched
+  artifacts_added: 3
+  pass: local-v1
