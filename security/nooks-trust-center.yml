@@ -1,0 +1,33 @@
+generated: '2026-07-20'
+method: searched
+probe: true
+source: https://trust.nooks.ai/
+url: https://trust.nooks.ai/
+provider: SafeBase
+company: Nooks Communications, Inc.
+contact: privacy@nooks.ai
+certifications:
+- SOC 2 Type 2
+- SOC 3
+- ISO/IEC 27001:2022
+- GDPR
+- CCPA
+- EU-US DPF
+documents:
+- SOC 2 report
+- ISO 27001 certificate
+- Pentest attestation
+- CAIQ Lite self-assessment
+- SIG Lite self-assessment
+- Subprocessors list
+- AI governance policy
+evidence:
+- source: https://trust.nooks.ai/
+  keywords:
+  - soc 2 type 2
+  - soc 3
+  - iso/iec 27001:2022
+  - gdpr
+  - ccpa
+  - eu-us dpf
+  - trust center
