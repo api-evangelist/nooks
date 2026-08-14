@@ -1,35 +1,40 @@
 aid: nooks
 name: Nooks
 description: >-
-  Nooks is an AI-native sales engagement platform positioned as "The Agent Workspace for
+  Nooks is an AI-native revenue/sales engagement platform positioned as "The Agent Workspace for
   Intelligent Outbound," where sales representatives and AI agents collaborate on prospecting,
-  sequencing, and dialing inside a single workspace. Its products include an AI Parallel Dialer,
-  AI Sequencing, AI Coaching, and Signals Intelligence, aimed at helping revenue and SDR teams
-  build more pipeline with less manual work. Nooks is backed by Kleiner Perkins, runs its
-  application at app.nooks.in, and maintains a SafeBase trust center with SOC 2 Type 2, SOC 3,
+  sequencing, dialing, and coaching inside a single workspace. Its products include an AI Parallel
+  Dialer, AI Sequencing, AI Coaching, Signals Intelligence, and a Virtual Salesfloor, aimed at
+  helping revenue and SDR teams build more pipeline with less manual work. Nooks publishes a public
+  Nooks Sequencing API (the "Nooks External API") documented with a Scalar-rendered OpenAPI 3.1.0
+  contract at developer.nooks.in, served from partner-api.nooks.in/v1, covering sequences, sequence
+  steps, sequence states, prospects, accounts, notes, tasks, calls, call dispositions, emails,
+  email templates, mailboxes, and users. Authentication accepts either a workspace-scoped
+  `nooks-api-` API key or an OAuth 2.0 authorization-code + PKCE access token from oauth.nooks.in,
+  with 24 published scopes, RFC 8414 authorization-server metadata, and a JWKS endpoint. Nooks also
+  operates an OAuth-protected remote MCP server at mcp.nooks.in, a signed `call.logged` webhook, an
+  Atlassian Statuspage at status.nooks.in, and a SafeBase trust center with SOC 2 Type 2, SOC 3,
   ISO/IEC 27001:2022, GDPR, CCPA, and EU-US DPF coverage plus a Bugcrowd responsible-disclosure
-  program. As of this enrichment pass Nooks does not publish a public developer API, SDKs, or
-  API reference; it integrates with CRMs and sales tools (Salesforce, HubSpot, and others) rather
-  than a self-service API surface.
+  program. Nooks is backed by Kleiner Perkins and runs its application at app.nooks.in.
 url: https://raw.githubusercontent.com/api-evangelist/nooks/refs/heads/main/apis.yml
 x-type: company
 x-source: kleiner-perkins-portfolio
-x-tier: stub
-x-tier-reason: portfolio-lead
 accessModel:
-  pricing: unknown
-  onboarding: unknown
+  pricing: contact-sales
+  onboarding: sales-assisted
   trial: false
   try_now: false
-  public: false
-  label: Unknown
-  confidence: low
-  source: []
-  generated: '2026-07-22'
-  method: derived
+  public: true
+  label: Public API, sales-gated pricing
+  confidence: medium
+  source:
+  - https://developer.nooks.in/
+  - https://www.nooks.ai/pricing
+  generated: '2026-08-14'
+  method: searched
 specificationVersion: '0.20'
 created: '2026-07-17'
-modified: '2026-07-20'
+modified: '2026-08-14'
 image: https://cdn.prod.website-files.com/697107c16c913fd77cf0aacd/69b2e1b1625a9e823d1edf5f_6995c9952aa828323555083c_OG%20Image%20(1).png
 tags:
 - Company
@@ -40,7 +45,72 @@ tags:
 - Outbound Sales
 - Sales Coaching
 - Revenue Operations
-apis: []
+- Sales Sequencing
+- CRM Integration
+- Agents
+- MCP
+apis:
+- aid: nooks-sequencing-api
+  name: Nooks Sequencing API
+  description: >-
+    The Nooks Sequencing API (also published as the "Nooks External API") provides programmatic
+    access to sequences, sequence steps, sequence states (enrollments), prospects, accounts, notes,
+    tasks, calls, call dispositions, emails, email templates, mailboxes, and users created in the
+    Nooks Sales Engagement Platform. It is an OpenAPI 3.1.0 contract with 37 operations across 30
+    paths, cursor pagination (`page[size]`, `page[after]`/`page[before]`), inline expansion via
+    `include`, per-endpoint per-minute rate limits with `X-RateLimit-*` headers, and a signed
+    `call.logged` webhook.
+  humanURL: https://developer.nooks.in/
+  baseURL: https://partner-api.nooks.in/v1
+  tags:
+  - Sales Engagement
+  - Sequencing
+  - Dialer
+  - CRM
+  properties:
+  - type: OpenAPI
+    url: openapi/nooks-sequencing-openapi.yml
+  - type: Overlay
+    url: overlays/nooks-sequencing-overlay.yaml
+  - type: APIReference
+    url: https://developer.nooks.in/
+  - type: Authentication
+    url: authentication/nooks-authentication.yml
+  - type: OAuthScopes
+    url: scopes/nooks-scopes.yml
+  - type: RateLimits
+    url: rate-limits/nooks-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/nooks-problem-types.yml
+  - type: Conventions
+    url: conventions/nooks-conventions.yml
+  - type: DataModel
+    url: data-model/nooks-data-model.yml
+  - type: Webhooks
+    url: asyncapi/nooks-webhooks.yml
+  - type: Conformance
+    url: conformance/nooks-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/nooks-lifecycle.yml
+- aid: nooks-mcp-server
+  name: Nooks MCP Server
+  description: >-
+    Nooks operates a hosted, remote Model Context Protocol server at https://mcp.nooks.in/. It is
+    OAuth-protected — an anonymous `tools/list` returns HTTP 401 `invalid_token` — and publishes
+    RFC 9728 protected-resource metadata naming https://oauth.nooks.in as its authorization server
+    and the same 24 scopes as the REST API.
+  humanURL: https://developer.nooks.in/
+  baseURL: https://mcp.nooks.in/
+  tags:
+  - MCP
+  - Agents
+  properties:
+  - type: MCPServer
+    url: mcp/nooks-mcp.yml
+  - type: ToolCrosswalk
+    url: mcp/nooks-tool-crosswalk.yml
+  - type: Authentication
+    url: authentication/nooks-authentication.yml
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
@@ -49,16 +119,30 @@ maintainers:
 common:
 - type: Website
   url: https://www.nooks.ai
+- type: DeveloperPortal
+  url: https://developer.nooks.in/
+- type: Documentation
+  url: https://developer.nooks.in/
+- type: APIReference
+  url: https://developer.nooks.in/
+- type: Support
+  url: https://nooks.help.usepylon.com/
+- type: HelpCenter
+  url: https://nooks.help.usepylon.com/
+- type: GitHubOrganization
+  url: https://github.com/NooksApp
 - type: Login
-  url: https://app.nooks.in/login
+  url: https://app.nooks.in
 - type: Pricing
   url: https://www.nooks.ai/pricing
 - type: Blog
   url: https://www.nooks.ai/blog
 - type: TermsOfService
-  url: https://www.nooks.ai/terms
+  url: https://www.nooks.ai/terms-of-services
 - type: PrivacyPolicy
   url: https://www.nooks.ai/privacy-policy
+- type: StatusPage
+  url: https://status.nooks.in/
 - type: TrustCenter
   url: security/nooks-trust-center.yml
 - type: Compliance
@@ -69,8 +153,20 @@ common:
   url: security/nooks-vulnerability-disclosure.yml
 - type: DomainSecurity
   url: security/nooks-domain-security.yml
+- type: WellKnown
+  url: well-known/nooks-well-known.yml
+- type: LLMsTxt
+  url: llms/nooks-llms.txt
+- type: Packages
+  url: packages/nooks-packages.yml
+- type: Plans
+  url: plans/nooks-plans-pricing.yml
+- type: AgentSkill
+  url: skills/_index.yml
+- type: AgenticAccess
+  url: agentic-access/nooks-agentic-access.yml
 x-enrichment:
-  date: '2026-07-20'
+  date: '2026-08-14'
   status: enriched
-  artifacts_added: 3
+  artifacts_added: 26
   pass: local-v1
