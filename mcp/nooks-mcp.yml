@@ -1,0 +1,60 @@
+generated: '2026-08-14'
+method: probed
+status: published
+source: https://mcp.nooks.in/.well-known/oauth-protected-resource
+note: >-
+  Found by probing MCP endpoints across every Nooks host. An anonymous JSON-RPC `tools/list`
+  POST to https://mcp.nooks.in/ returns HTTP 401 with
+  {"error":"invalid_token","error_description":"Missing Authorization header"} — proof a real
+  MCP server is listening, and that its live tool schemas are OAuth-gated. The server's own
+  RFC 9728 protected-resource metadata names it "Nooks MCP Server". Nooks publishes no tool
+  list in docs or llms.txt, so NO tools are enumerated here: the tool set requires an
+  authenticated `tools/list` and inventing one would be fabrication.
+deployment:
+  mode: remote
+  endpoint: https://mcp.nooks.in/
+  auth: oauth
+  verified: probed
+server:
+  name: Nooks MCP Server
+  transport: http
+  url: https://mcp.nooks.in/
+  resource: https://mcp.nooks.in/
+auth:
+  methods:
+  - oauth2
+  oauth2:
+    authorization_servers:
+    - https://oauth.nooks.in
+    authorization_endpoint: https://oauth.nooks.in/oauth/authorize
+    token_endpoint: https://oauth.nooks.in/oauth/token
+    grant_types:
+    - authorization_code
+    - refresh_token
+    pkce: S256
+    discovery: well-known/nooks-oauth-authorization-server.json
+    protected_resource_metadata: well-known/nooks-oauth-protected-resource.json
+    scope_count: 24
+    scopes: scopes/nooks-scopes.yml
+tool_count: null
+tools: []
+tools_note: >-
+  Not enumerated. `tools/list` is auth-gated (401 invalid_token anonymously) and Nooks publishes
+  no tool catalog in its docs, developer portal, or llms.txt. Input schemas require an
+  authenticated introspection pass. The scope list is the only public evidence of reach, and it
+  includes three scopes (coaching:read, teams:read, desktop-notes:read) with no REST equivalent —
+  see mcp/nooks-tool-crosswalk.yml.
+x-evidence:
+- url: https://mcp.nooks.in/
+  method: POST
+  body: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+  status: 401
+  response: '{"error":"invalid_token","error_description":"Missing Authorization header"}'
+- url: https://mcp.nooks.in/.well-known/oauth-protected-resource
+  status: 200
+  content_type: application/json
+- url: https://mcp.nooks.in/.well-known/oauth-authorization-server
+  status: 200
+- url: https://mcp.nooks.ai/
+  status: 000
+  note: does not resolve — the MCP host is on nooks.in, not nooks.ai

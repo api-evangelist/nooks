@@ -1,0 +1,73 @@
+generated: '2026-08-14'
+method: searched
+source: https://developer.nooks.in/openapi.yml
+docs: https://nooks.help.usepylon.com/articles/8109690071-Nooks-Webhooks-Integration-Guide
+spec_type: OpenAPI-webhooks
+asyncapi_published: false
+asyncapi_note: >-
+  Nooks publishes NO AsyncAPI document. Its event surface is declared as an OpenAPI 3.1 top-level
+  `webhooks:` block in the Sequencing API spec — machine-readable, but not AsyncAPI. Captured here
+  as a webhook catalog and wired as `type: Webhooks`. No AsyncAPI pointer is wired, and none is
+  fabricated.
+delivery:
+  transport: HTTP POST
+  configuration: Integrations → Webhooks in the Nooks workspace
+  verification_ping: >-
+    On save Nooks sends an immediate validation ping; the endpoint must answer HTTP 2xx or the
+    endpoint is not accepted.
+  signing_key_issuance: >-
+    A signing key is displayed ONCE on successful setup (form `nooks-webhook-signing-key-...`) —
+    store it securely; it cannot be retrieved again.
+  ack_timeout: 15 seconds
+  ack_status: 2xx
+  retries: exponential backoff with jitter, up to 8 attempts over 30 minutes
+  fanout: delivered to every webhook URL configured for the workspace
+security:
+  signature_header: x-webhook-signature
+  signature_format: 't=<unix-ms>,s=<base64-hmac-sha256>'
+  algorithm: HMAC-SHA256
+  signed_payload: '<timestamp>.<raw_request_body>'
+  encoding: base64
+  replay_protection: reject requests whose timestamp is older than 5 minutes
+  comparison: timing-safe comparison required (e.g. crypto.timingSafeEqual)
+  raw_body_required: true
+  raw_body_note: >-
+    Verification must use the literal, unparsed request body — re-serializing the JSON breaks the
+    signature.
+  reference_implementations: [Node.js, Python, Ruby]
+idempotency:
+  dedup_key: callData.callId
+  do_not_use: eventId
+  note: >-
+    The guide is explicit: dedupe on `callData.callId`, not `eventId`. A redelivered call produces
+    the same callId but a NEW eventId, so deduping on eventId will double-process retries.
+event_count: 1
+events:
+- name: call.logged
+  operationId: callLoggedWebhook
+  summary: Call logged
+  description: >-
+    Fires once a call is fully finalized in Nooks — status, disposition, recording, transcript,
+    and notes all resolved.
+  scope: >-
+    Fires for EVERY call logged in the workspace — inbound and outbound, dialer calls, manually
+    logged calls, and calls placed from a Nooks sequence.
+  payload_fields:
+  - event
+  - eventId
+  - occurredAt
+  - callData
+  payload_note: >-
+    callData carries the call record plus nested user, prospect, account, and sequence
+    attribution objects.
+  source: openapi/nooks-sequencing-openapi.yml#/webhooks/call.logged
+gaps:
+  note: >-
+    One event only. Nooks' REST surface covers sequences, sequence states, tasks, emails, and
+    prospects, but none of those emit webhooks — an integrator polling for sequence enrollment or
+    task changes has no push option.
+x-evidence:
+- url: https://developer.nooks.in/openapi.yml
+  status: 200
+- url: https://nooks.help.usepylon.com/articles/8109690071-Nooks-Webhooks-Integration-Guide
+  status: 200

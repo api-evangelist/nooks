@@ -1,0 +1,116 @@
+generated: '2026-08-14'
+method: derived
+source: openapi/nooks-sequencing-openapi.yml
+docs: https://developer.nooks.in/
+format: proprietary-json
+rfc9457: false
+rfc9457_note: >-
+  Nooks does NOT use RFC 9457 problem+json. Errors are a proprietary JSON envelope served as
+  application/json. Codes are SCREAMING_SNAKE_CASE strings, not URIs, so there is no
+  dereferenceable problem `type`. Derived from the spec's shared response components and every
+  inline 4xx/5xx description across 37 operations.
+envelope:
+  content_type: application/json
+  shape:
+    error.code: machine-readable error code (string)
+    error.message: human-readable message
+    error.details: optional object with additional context (used on 422)
+    traceId: >-
+      request trace identifier for correlating with server logs and support. Present whenever the
+      request carried a trace context (the normal case); omitted otherwise.
+  example: '{"error": {"code": "NOT_FOUND", "message": "The requested resource was not found"}, "traceId": "abc123def456"}'
+problems:
+- status: 400
+  code: BAD_REQUEST
+  title: Bad request - invalid parameters
+  message: Invalid page[after] cursor
+  remediation: >-
+    Correct the request parameters. A malformed or stale cursor in page[after]/page[before] is
+    the most common cause — restart pagination from the first page.
+  component: '#/components/responses/BadRequest'
+  operations: 36
+- status: 400
+  code: NO_CRM_CONNECTION
+  title: CRM connection unusable
+  message: The CRM isn't usable for the acting user
+  schema: NoCrmConnectionError
+  remediation: Connect or reauthorize the workspace/user CRM connection (Salesforce or HubSpot) before retrying.
+  source_operations: [syncProspects, createProspectNote, createAccountNote]
+- status: 401
+  code: UNAUTHORIZED
+  title: Unauthorized - invalid or missing API key
+  message: Invalid or missing API key
+  remediation: >-
+    Send a valid credential in the Authorization Bearer header — a `nooks-api-` workspace API key
+    or an unexpired OAuth 2.0 access token from oauth.nooks.in. OAuth access tokens live 1 hour.
+  component: '#/components/responses/Unauthorized'
+  operations: 37
+  note: Applied to every operation in the spec.
+- status: 403
+  code: INSUFFICIENT_SCOPE
+  title: Forbidden - token lacks the required scope
+  message: The OAuth token lacks the required scope, or the caller's role does not permit the action
+  remediation: >-
+    Re-consent the OAuth token with the scope the operation requires (see scopes/nooks-scopes.yml),
+    or use a workspace API key, which carries full read/write within its workspace.
+  source_operations: [createSequence, updateSequence]
+- status: 404
+  code: NOT_FOUND
+  title: Resource not found
+  message: The requested resource was not found
+  remediation: Verify the id and that the resource belongs to the authenticated workspace.
+  component: '#/components/responses/NotFound'
+  operations: 21
+- status: 409
+  code: CONFLICT
+  title: Conflict - prospect is already enrolled
+  remediation: >-
+    The prospect already has an active sequence state for this sequence. Fetch the existing
+    enrollment with listSequenceStates rather than re-enrolling.
+  source_operations: [createSequenceState]
+- status: 422
+  code: UNPROCESSABLE_ENTITY
+  title: Unprocessable entity
+  message: The request was well-formed but cannot be processed
+  details_example: '{"message": "Referenced prospect does not exist"}'
+  remediation: >-
+    A referenced resource does not exist or a business rule blocked the write. Documented causes
+    include: owner.id / ownerId is not a user in this workspace (use an id from GET /v1/users);
+    enrollment prerequisites not met (e.g. prospect missing a valid email); integrationType does
+    not match the record's CRM source; the prospect is marked Do Not Call; the CRM record is not
+    writable.
+  component: '#/components/responses/UnprocessableEntity'
+  operations: 10
+  source_operations: [createSequence, updateSequence, createSequenceState, createProspectNote, createAccountNote, createTask, updateTask]
+- status: 429
+  code: RATE_LIMIT_EXCEEDED
+  title: Rate limit exceeded
+  message: Rate limit exceeded
+  remediation: >-
+    Wait the number of seconds in the Retry-After header. May reflect either the per-workspace
+    Nooks limit or an upstream CRM (Salesforce / HubSpot) limit hit while servicing the request.
+  headers: [Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset]
+  component: '#/components/responses/RateLimitExceeded'
+  operations: 8
+  detail: rate-limits/nooks-rate-limits.yml
+- status: 500
+  code: INTERNAL_ERROR
+  title: Internal server error
+  message: An unexpected error occurred
+  remediation: >-
+    Retry with backoff. Capture `traceId` and include it in a support request. NOTE: Nooks
+    publishes no request-side idempotency key, so retrying a failed write may duplicate the
+    record — see conventions/nooks-conventions.yml.
+  component: '#/components/responses/InternalError'
+  operations: 37
+partial_success:
+- operation: syncProspects
+  status: 200
+  note: >-
+    POST /integrations/prospects/sync returns 200 for a batch and reports per-record outcomes in
+    `results` and `errors` (SyncProspectResult / SyncProspectError). A 200 here does NOT mean
+    every record succeeded — inspect the arrays.
+coverage:
+  status_codes: [400, 401, 403, 404, 409, 422, 429, 500]
+  operations_analyzed: 37
+  shared_components: 6

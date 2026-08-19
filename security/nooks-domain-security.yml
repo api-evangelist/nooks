@@ -1,15 +1,32 @@
-generated: '2026-07-20'
+generated: '2026-08-14'
 method: probed
 source: live DNS/TLS/HTTP probes of apis.yml + OpenAPI hosts
 hosts:
 - host: www.nooks.ai
   https: true
   tls_version: TLSv1.3
-  cert_expires: Sep  8 20:01:13 2026 GMT
+  cert_expires: Nov  6 22:41:01 2026 GMT
   hsts: true
   hsts_max_age: 31536000
+- host: developer.nooks.in
+  https: true
+  tls_version: TLSv1.3
+  cert_expires: Nov  2 23:21:48 2026 GMT
+  hsts: true
+  hsts_max_age: 31536000
+- host: partner-api.nooks.in
+  https: true
+  tls_version: TLSv1.3
+  cert_expires: Oct  1 06:47:29 2026 GMT
+  hsts: null
 domains:
 - domain: nooks.ai
+  dnssec: false
+  caa: []
+  spf: true
+  dmarc: true
+  dmarc_policy: quarantine
+- domain: nooks.in
   dnssec: false
   caa: []
   spf: true

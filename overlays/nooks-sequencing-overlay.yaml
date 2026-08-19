@@ -1,0 +1,64 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enhancements for the Nooks Sequencing API
+  version: 1.0.0
+extends: openapi/nooks-sequencing-openapi.yml
+x-generated: '2026-08-14'
+x-method: generated
+x-source: >-
+  Derived from this enrichment pass over https://developer.nooks.in/openapi.yml. Captures API
+  Evangelist annotations only — the harvested spec in openapi/_original/ is never mutated.
+actions:
+- target: $.info
+  update:
+    x-apievangelist-slug: nooks
+    x-apievangelist-harvested: '2026-08-14'
+    x-apievangelist-source: https://developer.nooks.in/openapi.yml
+    x-apievangelist-portal: https://developer.nooks.in/
+    x-apievangelist-status-page: https://status.nooks.in/
+    x-apievangelist-artifacts:
+      authentication: authentication/nooks-authentication.yml
+      scopes: scopes/nooks-scopes.yml
+      conventions: conventions/nooks-conventions.yml
+      errors: errors/nooks-problem-types.yml
+      rate_limits: rate-limits/nooks-rate-limits.yml
+      lifecycle: lifecycle/nooks-lifecycle.yml
+      data_model: data-model/nooks-data-model.yml
+      webhooks: asyncapi/nooks-webhooks.yml
+      mcp: mcp/nooks-mcp.yml
+      crosswalk: mcp/nooks-tool-crosswalk.yml
+- target: $.info
+  update:
+    x-apievangelist-gaps:
+    - id: no-request-idempotency
+      note: >-
+        No Idempotency-Key header or parameter on any of the 13 write operations. A retried POST
+        can duplicate the record; agents cannot safely retry a Nooks write on timeout.
+    - id: no-deprecation-policy
+      note: No published deprecation/sunset policy and no RFC 8594 Sunset header support.
+    - id: no-changelog
+      note: developer.nooks.in/changelog and www.nooks.ai/changelog both 404.
+    - id: no-client-sdk
+      note: No client library published in any registry; the portal offers generated snippets only.
+    - id: proprietary-error-envelope
+      note: >-
+        Errors are {error:{code,message},traceId} as application/json rather than RFC 9457
+        application/problem+json.
+    - id: scope-surface-divergence
+      note: >-
+        The authorization server grants 24 scopes; only 17 map to a published REST operation.
+        coaching:read, teams:read, desktop-notes:read, opportunities:read, search:read,
+        calls:write and emails:write reach capability the REST contract does not describe.
+- target: $.info
+  update:
+    x-apievangelist-auth-note: >-
+      The single BearerAuth http/bearer scheme carries two different credential types — a
+      long-lived workspace API key prefixed `nooks-api-` and a 1-hour user-scoped OAuth 2.0 JWT
+      from https://oauth.nooks.in. The OAuth flow is fully documented in info.description and in
+      RFC 8414 metadata but is NOT modelled as an `oauth2` securityScheme, so mechanical scope
+      derivation over this spec returns nothing.
+- target: $.servers
+  update:
+  - url: https://partner-api.nooks.in/v1
+    description: Production API
+    x-apievangelist-verified: '2026-08-14'

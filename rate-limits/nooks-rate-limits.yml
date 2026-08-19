@@ -1,0 +1,87 @@
+generated: '2026-08-14'
+method: searched
+source: https://developer.nooks.in/openapi.yml
+docs: https://developer.nooks.in/
+note: >-
+  Nooks publishes its full rate-limit table, the response headers, and the exhaustion behaviour
+  inside the OpenAPI `info.description`, and wires a shared `RateLimitExceeded` 429 response
+  component into every operation. Captured verbatim from the spec — no observed live values.
+scope: per-workspace and per-endpoint
+window: 60s fixed window
+window_note: >-
+  Separate endpoint buckets do not share quota. Routes without an explicit limit fall into a
+  shared default bucket.
+headers:
+  present_on: every response
+  limit: X-RateLimit-Limit
+  remaining: X-RateLimit-Remaining
+  reset: X-RateLimit-Reset
+  reset_units: seconds until the current window resets
+  retry_after: Retry-After
+  retry_after_units: seconds
+  standard: X-RateLimit-* (non-RFC 9331 draft naming)
+exhaustion:
+  status: 429
+  status_text: Too Many Requests
+  body: JSON error envelope (see errors/nooks-problem-types.yml)
+  example_message: Rate limit exceeded
+  retry_signal: Retry-After header
+  upstream_note: >-
+    A 429 may reflect either the per-workspace Nooks limit or an upstream CRM (Salesforce /
+    HubSpot) rate limit hit while servicing the request.
+limit_count: 8
+limits:
+- name: List reads
+  methods: [GET]
+  limit: 300
+  window: 60s
+  scope: per endpoint
+  endpoints: [/sequences, /emails, /users, /sequenceStates, /prospects, /mailboxes, /calls, /sequenceSteps, /callDispositions, /tasks, /accounts]
+- name: Read by ID
+  methods: [GET]
+  limit: 600
+  window: 60s
+  scope: per endpoint
+  endpoints: ['/sequences/{id}', '/emails/{id}', '/users/{id}', '/sequenceStates/{id}', '/prospects/{id}', '/mailboxes/{id}', '/calls/{id}', '/sequenceSteps/{id}', '/callDispositions/{id}', '/tasks/{id}', '/accounts/{id}', '/emailTemplate/{id}']
+- name: Sequence writes
+  methods: [POST, PATCH]
+  limit: 120
+  window: 60s
+  scope: per endpoint
+  endpoints: [/sequences, '/sequences/{id}']
+- name: Sequence state writes
+  methods: [POST, DELETE]
+  limit: 120
+  window: 60s
+  scope: per endpoint
+  endpoints: [/sequenceStates, '/sequenceStates/{id}', '/sequenceStates/{id}/actions/finish']
+- name: Task writes
+  methods: [POST, PATCH, DELETE]
+  limit: 120
+  window: 60s
+  scope: per endpoint
+  endpoints: [/tasks, '/tasks/{id}', '/tasks/{id}/complete', '/tasks/{id}/skip']
+- name: CRM note writes
+  methods: [POST]
+  limit: 30
+  window: 60s
+  scope: per endpoint
+  endpoints: ['/prospects/{id}/notes', '/accounts/{id}/notes']
+- name: Prospect sync
+  methods: [POST]
+  limit: 10
+  window: 60s
+  scope: per endpoint
+  endpoints: [/integrations/prospects/sync]
+- name: Default bucket
+  methods: [ANY]
+  limit: 30
+  window: 60s
+  scope: shared across all otherwise-unlimited routes
+  endpoints: [any other endpoint]
+pagination_caps:
+  max_page_size: 100
+  default_page_size: 50
+x-evidence:
+- url: https://developer.nooks.in/openapi.yml
+  status: 200

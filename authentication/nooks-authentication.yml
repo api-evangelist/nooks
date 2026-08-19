@@ -1,0 +1,90 @@
+generated: '2026-08-14'
+method: searched
+source: openapi/nooks-sequencing-openapi.yml
+docs: https://developer.nooks.in/
+note: >-
+  Derived from the OpenAPI securitySchemes, then upgraded from the spec's own Authentication
+  introduction and the live RFC 8414 authorization-server metadata at
+  https://oauth.nooks.in/.well-known/oauth-authorization-server. The spec declares a single
+  `BearerAuth` http/bearer scheme, but that one header carries TWO distinct credential types —
+  a long-lived workspace API key and a short-lived user-scoped OAuth 2.0 JWT — which the derived
+  pass could not see because Nooks does not model the OAuth flow as an `oauth2` securityScheme.
+summary:
+  types:
+  - http
+  - oauth2
+  http_schemes:
+  - bearer
+  oauth2_flows:
+  - authorizationCode
+  api_key_in:
+  - header
+schemes:
+- name: BearerAuth
+  type: http
+  scheme: bearer
+  applied: global
+  description: >-
+    Bearer token sent in the `Authorization` header. Accepts either a long-lived Nooks API key
+    (`nooks-api-...`, from Developer Settings → API Keys) or an OAuth 2.0 access token issued by
+    https://oauth.nooks.in. The API detects which format was sent and validates accordingly.
+  sources:
+  - openapi/nooks-sequencing-openapi.yml
+credentials:
+- kind: api-key
+  name: Nooks API key
+  transport: Authorization Bearer header
+  prefix: nooks-api-
+  lifetime: long-lived
+  scoping: workspace-scoped, full read/write within the owning workspace
+  issuance: Developer Settings → API Keys in the Nooks workspace
+  best_for: backend integrations and server-to-server automation
+- kind: oauth2-access-token
+  name: OAuth 2.0 access token
+  transport: Authorization Bearer header
+  format: JWT
+  lifetime: 1 hour
+  scoping: user-scoped, limited to consented scopes
+  refresh: refresh tokens rotate every 90 days and are invalidated on first re-use (refresh-token reuse detection)
+  best_for: third-party apps acting on behalf of a specific user
+oauth2:
+  issuer: https://oauth.nooks.in
+  discovery: well-known/nooks-oauth-authorization-server.json
+  discovery_url: https://oauth.nooks.in/.well-known/oauth-authorization-server
+  authorization_endpoint: https://oauth.nooks.in/oauth/authorize
+  token_endpoint: https://oauth.nooks.in/oauth/token
+  revocation_endpoint: https://oauth.nooks.in/oauth/revoke
+  jwks_uri: https://oauth.nooks.in/.well-known/jwks.json
+  jwks_file: well-known/nooks-jwks.json
+  response_types_supported:
+  - code
+  grant_types_supported:
+  - authorization_code
+  - refresh_token
+  token_endpoint_auth_methods_supported:
+  - client_secret_post
+  code_challenge_methods_supported:
+  - S256
+  pkce: required (S256)
+  scope_count: 24
+  scopes: scopes/nooks-scopes.yml
+protected_resources:
+- resource: https://mcp.nooks.in/
+  resource_name: Nooks MCP Server
+  metadata: well-known/nooks-oauth-protected-resource.json
+  metadata_url: https://mcp.nooks.in/.well-known/oauth-protected-resource
+  spec: RFC 9728 OAuth 2.0 Protected Resource Metadata
+  authorization_servers:
+  - https://oauth.nooks.in
+errors:
+  '401': Unauthorized — missing, malformed, or expired credential
+  '403': Forbidden — credential valid but lacks the required scope or workspace access
+x-evidence:
+- url: https://developer.nooks.in/openapi.yml
+  status: 200
+- url: https://oauth.nooks.in/.well-known/oauth-authorization-server
+  status: 200
+- url: https://oauth.nooks.in/.well-known/jwks.json
+  status: 200
+- url: https://mcp.nooks.in/.well-known/oauth-protected-resource
+  status: 200

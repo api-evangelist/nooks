@@ -1,0 +1,108 @@
+generated: '2026-08-14'
+method: searched
+source: https://developer.nooks.in/openapi.yml
+docs: https://developer.nooks.in/
+note: >-
+  Nooks documents its cross-cutting semantics unusually thoroughly inside the OpenAPI
+  `info.description` — authentication, rate limiting, pagination, and inline expansion each get
+  their own section with worked examples. Captured from the spec plus the webhooks integration
+  guide.
+authentication:
+  style: bearer-token
+  header: Authorization
+  form: 'Bearer <token>'
+  credential_types: [api-key, oauth2-access-token]
+  detail: authentication/nooks-authentication.yml
+idempotency:
+  request_idempotency_key: none
+  supported: partial
+  assessment: >-
+    Nooks publishes NO request-side idempotency key. There is no `Idempotency-Key` header or
+    parameter anywhere in the 37-operation spec, so a retried POST — createSequence, createTask,
+    createProspectNote, createAccountNote, syncProspects — can duplicate the record. An agent
+    cannot safely retry a Nooks write on a timeout. This is the single largest runtime-semantics
+    gap in an otherwise well-documented API, and it is why no `Idempotency` pointer is wired in
+    apis.yml: crediting one would assert retry safety the contract does not provide.
+  what_is_supported:
+  - kind: naturally-idempotent-operation
+    operation: finishSequenceState
+    path: /sequenceStates/{id}/actions/finish
+    detail: 'Documented in the spec: "This endpoint is idempotent: returns 204 even if the sequence state is already finished."'
+  - kind: consumer-side-dedup-key
+    surface: webhooks
+    key: callData.callId
+    detail: >-
+      The call.logged webhook guide instructs consumers to dedupe on `callData.callId`, NOT on
+      `eventId` — the same call redelivered produces the same callId but a new eventId. This is
+      an idempotency contract for the event surface only; it places the burden on the consumer
+      and does nothing for API writes.
+pagination:
+  style: cursor
+  params:
+    size: page[size]
+    after: page[after]
+    before: page[before]
+  default_page_size: 50
+  max_page_size: 100
+  cursor_type: opaque token returned by the API
+  malformed_cursor: 400 Bad Request ('Invalid page[after] cursor')
+  response_fields:
+    links: PaginationLinks
+  applies_to: all list endpoints
+expansion:
+  supported: true
+  name: include
+  style: comma-separated query parameter
+  form: '?include=field1,field2'
+  detail: >-
+    Most GET endpoints expand related `ReferenceObject` fields inline, eliminating follow-up
+    calls. Unexpanded references are returned as {id, _href} stubs.
+  reference_shape:
+    id: string
+    _href: relative path to the full resource (e.g. /v1/sequenceStates/ss-1)
+sparse_fields:
+  supported: false
+metadata:
+  supported: false
+request_tracing:
+  request_id_header: none-documented
+versioning:
+  scheme: uri-path
+  current: v1
+  spec_version: 0.1.0
+  base: https://partner-api.nooks.in/v1
+  detail: lifecycle/nooks-lifecycle.yml
+error_envelope:
+  format: proprietary-json
+  rfc9457: false
+  content_type: application/json
+  shape:
+    error: machine-readable error code
+    message: human-readable message
+  detail: errors/nooks-problem-types.yml
+rate_limit_signaling:
+  headers: [X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After]
+  exhaustion_status: 429
+  detail: rate-limits/nooks-rate-limits.yml
+webhooks:
+  event: call.logged
+  signature_header: x-webhook-signature
+  signature_form: 't=<unix-ms>,s=<base64-hmac-sha256>'
+  algorithm: HMAC-SHA256 over '<timestamp>.<raw_body>'
+  replay_window: 5 minutes
+  ack_timeout: 15 seconds
+  ack_status: 2xx
+  retries: exponential backoff with jitter, up to 8 attempts over 30 minutes
+  detail: asyncapi/nooks-webhooks.yml
+cross_links:
+  authentication: authentication/nooks-authentication.yml
+  scopes: scopes/nooks-scopes.yml
+  errors: errors/nooks-problem-types.yml
+  lifecycle: lifecycle/nooks-lifecycle.yml
+  rate_limits: rate-limits/nooks-rate-limits.yml
+  webhooks: asyncapi/nooks-webhooks.yml
+x-evidence:
+- url: https://developer.nooks.in/openapi.yml
+  status: 200
+- url: https://nooks.help.usepylon.com/articles/8109690071-Nooks-Webhooks-Integration-Guide
+  status: 200

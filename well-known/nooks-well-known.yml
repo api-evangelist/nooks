@@ -1,0 +1,91 @@
+generated: '2026-08-14'
+method: searched
+source: live probes of every Nooks host (website, docs, API, OAuth, MCP, app)
+note: >-
+  Probed five hosts across nine well-known paths. Real documents were served only by the OAuth
+  and MCP hosts. www.nooks.ai, developer.nooks.in, partner-api.nooks.in and app.nooks.in return
+  404 on every /.well-known/* path; the 404 bodies are HTML shells, not documents.
+hosts:
+- host: https://oauth.nooks.in
+  documents:
+  - path: /.well-known/oauth-authorization-server
+    spec: RFC 8414
+    status: 200
+    content_type: application/json
+    file: nooks-oauth-authorization-server.json
+  - path: /.well-known/jwks.json
+    spec: RFC 7517
+    status: 200
+    content_type: application/json
+    file: nooks-jwks.json
+  - path: /.well-known/openid-configuration
+    status: 404
+  - path: /.well-known/security.txt
+    status: 404
+  - path: /.well-known/api-catalog
+    status: 404
+  - path: /.well-known/ai-plugin.json
+    status: 404
+  - path: /.well-known/agent-card.json
+    status: 404
+  - path: /.well-known/agent.json
+    status: 404
+  - path: /.well-known/oauth-protected-resource
+    status: 404
+- host: https://mcp.nooks.in
+  documents:
+  - path: /.well-known/oauth-protected-resource
+    spec: RFC 9728
+    status: 200
+    content_type: application/json
+    file: nooks-oauth-protected-resource.json
+  - path: /.well-known/oauth-authorization-server
+    spec: RFC 8414
+    status: 200
+    content_type: application/json
+    note: mirrors the oauth.nooks.in document; not saved twice
+  - path: /.well-known/agent-card.json
+    status: 404
+  - path: /.well-known/agent.json
+    status: 404
+  - path: /.well-known/security.txt
+    status: 404
+- host: https://partner-api.nooks.in
+  documents:
+  - {path: /.well-known/oauth-authorization-server, status: 404}
+  - {path: /.well-known/openid-configuration, status: 404}
+  - {path: /.well-known/jwks.json, status: 404}
+  - {path: /.well-known/security.txt, status: 404}
+  - {path: /.well-known/api-catalog, status: 404}
+  - {path: /.well-known/ai-plugin.json, status: 404}
+  - {path: /.well-known/agent-card.json, status: 404}
+  - {path: /.well-known/agent.json, status: 404}
+  - {path: /.well-known/oauth-protected-resource, status: 404}
+- host: https://www.nooks.ai
+  documents:
+  - {path: /.well-known/oauth-authorization-server, status: 404}
+  - {path: /.well-known/openid-configuration, status: 404}
+  - {path: /.well-known/jwks.json, status: 404}
+  - {path: /.well-known/security.txt, status: 404}
+  - {path: /.well-known/api-catalog, status: 404}
+  - {path: /.well-known/ai-plugin.json, status: 404}
+  - {path: /.well-known/agent-card.json, status: 404}
+  - {path: /.well-known/agent.json, status: 404}
+- host: https://developer.nooks.in
+  documents:
+  - {path: /.well-known/security.txt, status: 404}
+  - {path: /.well-known/api-catalog, status: 404}
+  - {path: /.well-known/agent-card.json, status: 404}
+  - {path: /.well-known/agent.json, status: 404}
+- host: https://app.nooks.in
+  documents:
+  - {path: /.well-known/security.txt, status: 404}
+  - {path: /.well-known/api-catalog, status: 404}
+  - {path: /.well-known/agent-card.json, status: 404}
+  - {path: /.well-known/agent.json, status: 404}
+summary:
+  hits: 3
+  security_txt: false
+  api_catalog: false
+  agent_card: false
+  oauth_metadata: true

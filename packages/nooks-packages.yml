@@ -1,0 +1,72 @@
+generated: '2026-08-14'
+method: searched
+source: registry.npmjs.org, pypi.org, github.com/NooksApp, https://developer.nooks.in/
+sdk_count: 0
+finding: >-
+  Nooks ships NO client SDK for the Nooks Sequencing API in any language. Searched npm (full-text
+  and the @nooks-ai scope), PyPI (nooks, nooks-api, nooks-sdk — all 404), the GitHub org
+  github.com/NooksApp, and the Scalar developer portal, which offers generated fetch/curl snippets
+  but links no library. The three first-party npm packages below are internal Node infrastructure
+  Nooks publishes for its own services — a logger, a metrics collector, and a fork of a ZoomInfo
+  auth client — none of which call the Nooks API. Because no official client library exists, NO
+  `SDKs` pointer is wired in apis.yml: emitting one would credit Nooks with an SDK surface it does
+  not ship. An integrator writes raw HTTP against https://partner-api.nooks.in/v1.
+packages:
+- language: javascript
+  registry: npm
+  name: '@nooks-ai/metrics'
+  url: https://www.npmjs.com/package/@nooks-ai/metrics
+  install: npm install @nooks-ai/metrics
+  version: 2.0.0
+  published: '2026-03-30'
+  official: true
+  api_client: false
+  description: Node metrics collection library for use by Nooks.
+  repository: https://github.com/NooksApp/metrics-node
+  note: Internal infrastructure library, not a client for the Nooks Sequencing API.
+- language: javascript
+  registry: npm
+  name: '@nooks-ai/nooks-logger'
+  url: https://www.npmjs.com/package/@nooks-ai/nooks-logger
+  install: npm install @nooks-ai/nooks-logger
+  version: 2.8.0
+  published: '2025-10-29'
+  official: true
+  api_client: false
+  description: Logger for Node.js.
+  repository: https://github.com/NooksApp/nooks-logger
+  note: >-
+    Internal infrastructure library, not a client for the Nooks Sequencing API. Last published
+    2025-10-29 — roughly ten months stale at the time of this pass.
+- language: javascript
+  registry: npm
+  name: '@nooks-ai/nooks-zoominfo-api-auth-client'
+  url: https://www.npmjs.com/package/@nooks-ai/nooks-zoominfo-api-auth-client
+  install: npm install @nooks-ai/nooks-zoominfo-api-auth-client
+  version: 1.2.1
+  published: '2026-05-22'
+  official: true
+  api_client: false
+  description: ZoomInfo API authentication client (Nooks fork).
+  note: >-
+    A fork of a third-party (ZoomInfo) auth client, published under the Nooks scope. It
+    authenticates against ZoomInfo, not Nooks.
+registries_checked:
+- {registry: npm, result: 3 first-party infrastructure packages, api_clients: 0}
+- {registry: pypi, result: none, probed: [nooks, nooks-api, nooks-sdk], status: 404}
+- {registry: rubygems, result: none}
+- {registry: packagist, result: none}
+- {registry: crates.io, result: none}
+- {registry: nuget, result: none}
+- {registry: maven-central, result: none}
+- {registry: pkg.go.dev, result: none}
+github_org: https://github.com/NooksApp
+x-evidence:
+- url: https://registry.npmjs.org/-/v1/search?text=nooks
+  status: 200
+- url: https://pypi.org/pypi/nooks/json
+  status: 404
+- url: https://github.com/NooksApp
+  status: 200
+- url: https://developer.nooks.in/
+  status: 200

@@ -1,4 +1,4 @@
-generated: '2026-07-20'
+generated: '2026-08-14'
 method: searched
 probe: true
 source: https://trust.nooks.ai/
@@ -6,6 +6,12 @@ url: https://trust.nooks.ai/
 provider: SafeBase
 company: Nooks Communications, Inc.
 contact: privacy@nooks.ai
+note: >-
+  probe-security-programs.py re-ran on 2026-08-14 and extracted only three certifications
+  (SOC 2, ISO 27001, GDPR) from the SafeBase page. The richer list below was captured by the
+  2026-07-20 searched pass and is retained per the never-downgrade rule — the probe's keyword
+  extractor sees fewer named certs than the page actually lists, it does not mean Nooks dropped
+  them.
 certifications:
 - SOC 2 Type 2
 - SOC 3
@@ -23,6 +29,7 @@ documents:
 - AI governance policy
 evidence:
 - source: https://trust.nooks.ai/
+  fetched: '2026-07-20'
   keywords:
   - soc 2 type 2
   - soc 3
@@ -31,3 +38,11 @@ evidence:
   - ccpa
   - eu-us dpf
   - trust center
+- source: https://trust.nooks.ai/
+  fetched: '2026-08-14'
+  status: 200
+  keywords:
+  - soc 2
+  - iso/iec 27001
+  - trust center
+  - gdpr

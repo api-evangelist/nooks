@@ -1,0 +1,120 @@
+generated: '2026-08-14'
+method: searched
+source: https://oauth.nooks.in/.well-known/oauth-authorization-server
+docs: https://developer.nooks.in/
+note: >-
+  derive-oauth-scopes.py found NO scopes: Nooks declares only a single `BearerAuth` http/bearer
+  securityScheme in its OpenAPI and never models the OAuth flow as an `oauth2` scheme, so the
+  mechanical pass had nothing to read. The scopes below are searched, not derived — 24 scopes
+  published verbatim in `scopes_supported` of the live RFC 8414 authorization-server metadata,
+  with descriptions taken from the scope table in the OpenAPI `info.description` Authentication
+  section. Nothing here is inferred.
+schemes:
+- name: NooksOAuth2
+  source: https://oauth.nooks.in/.well-known/oauth-authorization-server
+  spec: RFC 8414 OAuth 2.0 Authorization Server Metadata
+  issuer: https://oauth.nooks.in
+  flows:
+  - flow: authorizationCode
+    authorizationUrl: https://oauth.nooks.in/oauth/authorize
+    tokenUrl: https://oauth.nooks.in/oauth/token
+    revocationUrl: https://oauth.nooks.in/oauth/revoke
+    pkce: S256
+scope_count: 24
+scopes:
+- scope: prospects:read
+  description: View your prospects
+  flows: [authorizationCode]
+- scope: prospects:write
+  description: Create and update prospects
+  flows: [authorizationCode]
+- scope: sequences:read
+  description: View your sequences
+  flows: [authorizationCode]
+- scope: sequences:write
+  description: Create and update sequences
+  flows: [authorizationCode]
+- scope: sequence-steps:read
+  description: View sequence steps
+  flows: [authorizationCode]
+- scope: sequence-states:read
+  description: View sequence enrollments
+  flows: [authorizationCode]
+- scope: sequence-states:write
+  description: Enroll prospects and manage enrollments
+  flows: [authorizationCode]
+- scope: tasks:read
+  description: View your tasks
+  flows: [authorizationCode]
+- scope: tasks:write
+  description: Create, update, complete, skip, and delete tasks
+  flows: [authorizationCode]
+- scope: calls:read
+  description: View your calls
+  flows: [authorizationCode]
+- scope: calls:write
+  description: Create and update calls
+  flows: [authorizationCode]
+- scope: call-dispositions:read
+  description: View call dispositions
+  flows: [authorizationCode]
+- scope: emails:read
+  description: View your emails
+  flows: [authorizationCode]
+- scope: emails:write
+  description: Create and update emails
+  flows: [authorizationCode]
+- scope: email-templates:read
+  description: View email templates
+  flows: [authorizationCode]
+- scope: mailboxes:read
+  description: View connected mailboxes
+  flows: [authorizationCode]
+- scope: users:read
+  description: View users in your workspace
+  flows: [authorizationCode]
+- scope: accounts:read
+  description: View accounts (companies) in your workspace
+  flows: [authorizationCode]
+- scope: notes:write
+  description: Create notes on CRM-backed prospects and accounts
+  flows: [authorizationCode]
+- scope: opportunities:read
+  description: View opportunities (deals) in your workspace
+  flows: [authorizationCode]
+- scope: search:read
+  description: Search across your prospects, accounts, and other records
+  flows: [authorizationCode]
+- scope: coaching:read
+  description: >-
+    Published in the live authorization-server metadata `scopes_supported`. Not listed in the
+    OpenAPI scope table and has no corresponding REST operation in the published spec — read
+    access to AI Coaching data, reachable via the MCP server.
+  flows: [authorizationCode]
+- scope: teams:read
+  description: >-
+    Published in the live authorization-server metadata `scopes_supported`. Not listed in the
+    OpenAPI scope table and has no corresponding REST operation in the published spec.
+  flows: [authorizationCode]
+- scope: desktop-notes:read
+  description: >-
+    Published in the live authorization-server metadata `scopes_supported`. Not listed in the
+    OpenAPI scope table and has no corresponding REST operation in the published spec.
+  flows: [authorizationCode]
+divergence:
+  note: >-
+    The authorization server publishes 24 scopes; the OpenAPI scope table documents 21. The three
+    extras (coaching:read, teams:read, desktop-notes:read) are a real surface divergence — they
+    grant access that the published REST contract does not describe, and are the strongest hint
+    that the MCP server at mcp.nooks.in reaches capabilities the REST API does not expose.
+  metadata_only:
+  - coaching:read
+  - teams:read
+  - desktop-notes:read
+x-evidence:
+- url: https://oauth.nooks.in/.well-known/oauth-authorization-server
+  status: 200
+- url: https://mcp.nooks.in/.well-known/oauth-protected-resource
+  status: 200
+- url: https://developer.nooks.in/openapi.yml
+  status: 200

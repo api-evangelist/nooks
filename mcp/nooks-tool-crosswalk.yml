@@ -1,0 +1,162 @@
+generated: '2026-08-14'
+method: derived
+source: mcp/nooks-mcp.yml + openapi/nooks-sequencing-openapi.yml + scopes/nooks-scopes.yml
+note: >-
+  Nooks ships BOTH an OpenAPI REST contract and a hosted MCP server, so the crosswalk is emitted.
+  But the MCP `tools/list` is OAuth-gated (401 anonymously) and no tool catalog is published
+  anywhere, so there are NO tool names to bind. This crosswalk is therefore built on the one
+  public artifact both surfaces share: the 24-scope OAuth authorization grid. Scopes are the
+  honest proxy for reach — the REST spec and the MCP server are protected by the SAME
+  authorization server and the SAME scope list, so a scope with no REST operation is a
+  capability MCP can reach and REST cannot. Every row below is scope-to-operation, not
+  tool-to-operation, and is labelled as such. No tool names are invented.
+binding_basis: scope
+surfaces:
+  openapi:
+    file: openapi/nooks-sequencing-openapi.yml
+    source: https://developer.nooks.in/openapi.yml
+    server: https://partner-api.nooks.in/v1
+    operations: 37
+    gated: false
+  mcp:
+    url: https://mcp.nooks.in/
+    tools_list: gated
+    tools_list_status: 401
+    gated: true
+  graphql:
+    present: false
+crosswalk:
+- scope: sequences:read
+  category: sequences
+  rest: [listSequences, getSequence]
+  binding: rest
+  confidence: high
+- scope: sequences:write
+  category: sequences
+  rest: [createSequence, updateSequence]
+  binding: rest
+  confidence: high
+- scope: sequence-steps:read
+  category: sequences
+  rest: [listSequenceSteps, getSequenceStep]
+  binding: rest
+  confidence: high
+- scope: sequence-states:read
+  category: enrollment
+  rest: [listSequenceStates, getSequenceState]
+  binding: rest
+  confidence: high
+- scope: sequence-states:write
+  category: enrollment
+  rest: [createSequenceState, deleteSequenceState, finishSequenceState]
+  binding: rest
+  confidence: high
+- scope: prospects:read
+  category: crm
+  rest: [listProspects, getProspect]
+  binding: rest
+  confidence: high
+- scope: prospects:write
+  category: crm
+  rest: [syncProspects]
+  binding: rest
+  confidence: medium
+  note: syncProspects (POST /integrations/prospects/sync) is the only prospect write operation in the spec.
+- scope: accounts:read
+  category: crm
+  rest: [listAccounts, getAccount]
+  binding: rest
+  confidence: high
+- scope: notes:write
+  category: crm
+  rest: [createProspectNote, createAccountNote]
+  binding: rest
+  confidence: high
+- scope: tasks:read
+  category: tasks
+  rest: [listTasks, getTask]
+  binding: rest
+  confidence: high
+- scope: tasks:write
+  category: tasks
+  rest: [createTask, updateTask, deleteTask, completeTask, skipTask]
+  binding: rest
+  confidence: high
+- scope: calls:read
+  category: calls
+  rest: [listCalls, getCall]
+  binding: rest
+  confidence: high
+- scope: call-dispositions:read
+  category: calls
+  rest: [listCallDispositions, getCallDisposition]
+  binding: rest
+  confidence: high
+- scope: emails:read
+  category: email
+  rest: [listEmails, getEmail]
+  binding: rest
+  confidence: high
+- scope: email-templates:read
+  category: email
+  rest: [getEmailTemplate]
+  binding: rest
+  confidence: high
+- scope: mailboxes:read
+  category: email
+  rest: [listMailboxes, getMailbox]
+  binding: rest
+  confidence: high
+- scope: users:read
+  category: identity
+  rest: [listUsers, getUser]
+  binding: rest
+  confidence: high
+mcp_only:
+- scope: coaching:read
+  reason: >-
+    Published in the MCP server's own protected-resource metadata and in the authorization
+    server's scopes_supported, but no REST operation in the published OpenAPI reads coaching
+    data. AI Coaching (call scoring, battlecards, call library) is a marquee Nooks product with
+    no REST surface.
+- scope: teams:read
+  reason: Granted by the shared authorization server; no REST operation in the published OpenAPI exposes teams.
+- scope: emails:write
+  reason: >-
+    Scope is published on both surfaces but the OpenAPI exposes only read operations for emails
+    (listEmails, getEmail). No email write operation exists in the REST contract.
+- scope: calls:write
+  reason: >-
+    Scope is published on both surfaces but the OpenAPI exposes only read operations for calls
+    (listCalls, getCall). No call write operation exists in the REST contract.
+- scope: opportunities:read
+  reason: Published scope with no opportunities path, tag, or schema anywhere in the OpenAPI.
+- scope: search:read
+  reason: >-
+    Published scope for cross-record search. The OpenAPI has no search operation; list endpoints
+    offer filters only.
+- scope: desktop-notes:read
+  reason: >-
+    Published scope with no REST equivalent. Likely backs the Nooks desktop client rather than
+    the partner API.
+rest_only:
+- capability: introspection
+  rest: [getMe]
+  note: >-
+    GET /me resolves the caller's identity and workspace. Covered by no dedicated scope — it is
+    the token-introspection endpoint every credential can call.
+coverage:
+  tools_named: 0
+  tools_bound: 0
+  tools_note: MCP tool list is auth-gated; zero tool names are public.
+  scopes_total: 24
+  scopes_bound_to_rest: 17
+  scopes_without_rest_operation: 7
+  rest_operations_total: 37
+  rest_operations_covered_by_a_scope: 36
+finding: >-
+  29% of the scopes Nooks' authorization server grants (7 of 24) have no operation in the
+  published REST contract. The MCP server and the REST API sit behind one authorization server
+  and one scope list, so those seven scopes are capability the agent surface can reach and the
+  documented API cannot — coaching, search, opportunities, teams, desktop notes, and write access
+  to calls and emails. That gap is the crosswalk's actual finding.

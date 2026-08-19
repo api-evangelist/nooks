@@ -1,0 +1,132 @@
+generated: '2026-08-14'
+method: derived
+source: openapi/nooks-sequencing-openapi.yml
+docs: https://developer.nooks.in/
+note: >-
+  Entity-relationship graph derived from the 28 component schemas and their $ref / oneOf links.
+  Nooks models every association as a `ReferenceObject` ({id, _href}) that the caller can expand
+  inline with `?include=`, so relationships are explicit in the contract rather than implied by
+  bare id fields. Relationship cardinality is read from the schema shape (array vs object);
+  inverse edges are named where a list endpoint provides the filter.
+reference_shape:
+  schema: ReferenceObject
+  fields:
+    id: string
+    _href: relative path to the full resource (e.g. /v1/sequenceStates/ss-1)
+  expansion: '?include=field1,field2 replaces the stub with the full object'
+id_format:
+  style: opaque string
+  prefixed: false
+  note: >-
+    No documented id prefixes. Examples in the spec use short opaque strings (seq-1, ss-1, u-1)
+    but the schema declares plain `string` with no stated format, so consumers must treat ids as
+    opaque.
+entity_count: 14
+entities:
+- name: Sequence
+  tag: Sequences
+  operations: [listSequences, createSequence, getSequence, updateSequence]
+  key_fields: [id, name, type, enabled, privacy, analytics, createdAt, updatedAt]
+- name: SequenceStep
+  tag: SequenceSteps
+  operations: [listSequenceSteps, getSequenceStep]
+  key_fields: [id, order, name, interval, action, note, hasAbVariants, analytics]
+- name: SequenceState
+  tag: SequenceStates
+  description: A prospect's enrollment in a sequence.
+  operations: [listSequenceStates, createSequenceState, getSequenceState, deleteSequenceState, finishSequenceState]
+  key_fields: [id, state, createdAt, updatedAt]
+- name: Prospect
+  tag: Prospects
+  operations: [listProspects, getProspect, syncProspects]
+  key_fields: [id, name, firstName, lastName, title, primaryEmail, linkedInUrl, crmId]
+- name: Account
+  tag: Accounts
+  description: A company record.
+  operations: [listAccounts, getAccount]
+  key_fields: [id, name, domain, numEmployees, linkedInUrl, description]
+- name: Task
+  tag: Tasks
+  operations: [listTasks, createTask, getTask, updateTask, deleteTask, completeTask, skipTask]
+  key_fields: [id, action, completed, dueAt, note, status, priority]
+- name: Call
+  tag: Calls
+  operations: [listCalls, getCall]
+  key_fields: [id, source, duration, from, to, direction, recordingUrl, time]
+- name: CallDisposition
+  tag: CallDispositions
+  operations: [listCallDispositions, getCallDisposition]
+  key_fields: [id, name, callOutcome, order]
+- name: Email
+  tag: Emails
+  operations: [listEmails, getEmail]
+  key_fields: [id, type, status, from, to, recipients, subject, bodyText, bodyHtml, openCount, clickCount]
+  engagement_timestamps: [date, deliveredAt, openedAt, clickedAt, bouncedAt, repliedAt]
+- name: EmailTemplate
+  tag: EmailTemplates
+  operations: [getEmailTemplate]
+  key_fields: [id, name, subject, htmlBody, source, archived, order, privacy]
+- name: Mailbox
+  tag: Mailboxes
+  operations: [listMailboxes, getMailbox]
+  key_fields: [id, email, isDefault]
+- name: User
+  tag: Users
+  operations: [listUsers, getUser, getMe]
+  key_fields: [id, name, email, crmId]
+- name: Note
+  tag: Notes
+  description: A note written back to the CRM against a prospect or account.
+  operations: [createProspectNote, createAccountNote]
+  key_fields: [id, externalId, text, associatedType, integrationType, userExternalId, userName]
+  polymorphic: true
+  polymorphic_note: '`associated` + `associatedType` point at either a Prospect or an Account.'
+- name: Analytics
+  description: Embedded engagement rollup, not independently addressable.
+  embedded_in: [Sequence, SequenceStep]
+  composed_of: [EmailAnalytics, CallAnalytics, LinkedInAnalytics]
+relationships:
+- {from: Sequence, to: User, type: has_one, via: owner}
+- {from: Sequence, to: SequenceStep, type: has_many, via: sequenceSteps}
+- {from: Sequence, to: Analytics, type: has_one, via: analytics, embedded: true}
+- {from: SequenceStep, to: Sequence, type: belongs_to, via: sequence}
+- {from: SequenceStep, to: EmailTemplate, type: has_one, via: template}
+- {from: SequenceStep, to: Analytics, type: has_one, via: analytics, embedded: true}
+- {from: SequenceState, to: Sequence, type: belongs_to, via: sequence}
+- {from: SequenceState, to: Prospect, type: belongs_to, via: prospect}
+- {from: SequenceState, to: Account, type: has_one, via: account}
+- {from: SequenceState, to: User, type: has_one, via: creator}
+- {from: SequenceState, to: User, type: has_one, via: owner}
+- {from: SequenceState, to: SequenceStep, type: has_one, via: sequenceStep, note: the step the enrollment currently sits on}
+- {from: Prospect, to: Account, type: belongs_to, via: account}
+- {from: Prospect, to: SequenceState, type: has_many, via: sequenceStates}
+- {from: Task, to: User, type: has_one, via: owner}
+- {from: Task, to: Prospect, type: belongs_to, via: prospect}
+- {from: Task, to: Sequence, type: has_one, via: sequence}
+- {from: Task, to: SequenceState, type: has_one, via: sequenceState}
+- {from: Task, to: SequenceStep, type: has_one, via: sequenceStep}
+- {from: Call, to: Prospect, type: belongs_to, via: prospect}
+- {from: Call, to: Sequence, type: has_one, via: sequence}
+- {from: Call, to: SequenceStep, type: has_one, via: sequenceStep}
+- {from: Call, to: CallDisposition, type: has_one, via: callDisposition}
+- {from: Call, to: User, type: has_one, via: owner}
+- {from: Email, to: Prospect, type: belongs_to, via: prospect}
+- {from: Email, to: Sequence, type: has_one, via: sequence}
+- {from: Email, to: SequenceStep, type: has_one, via: sequenceStep}
+- {from: Mailbox, to: User, type: belongs_to, via: user}
+- {from: EmailTemplate, to: User, type: has_one, via: owner}
+- {from: Note, to: Prospect, type: belongs_to, via: associated, polymorphic: true}
+- {from: Note, to: Account, type: belongs_to, via: associated, polymorphic: true}
+core:
+  hubs: [Prospect, Sequence, User]
+  note: >-
+    Prospect, Sequence and User are the three hubs — nearly every other entity references at
+    least one of them. Account sits behind Prospect and is the only entity with no outbound
+    reference of its own.
+crm_boundary:
+  note: >-
+    Prospect, User and Note carry CRM identifiers (crmId, externalId, integrationType) — the data
+    model is explicitly a projection over Salesforce/HubSpot records, and CRM-backed writes can
+    fail with NO_CRM_CONNECTION (400) or 422 when the CRM record is not writable.
+  crm_types: SyncableCrmType, CrmNoteIntegrationType
+render: null

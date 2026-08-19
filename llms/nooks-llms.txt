@@ -1,0 +1,106 @@
+# Nooks
+
+
+Nooks is the Revenue Agent Platform for Sales. It's an AI sales platform where AI agents and human reps work together to book more meetings. It puts everything outbound teams need in one place: a parallel dialer, email and call sequences, buying signals, call coaching, and tools for RevOps. Most sales teams know what good selling looks like. The hard part is doing it every day, on every account. Nooks fixes that. AI agents do the research, pick the best accounts, and handle follow-up. Reps spend their time on live conversations. Nooks is backed by Kleiner Perkins ($43M Series B, 2024). It helps sales development teams, sales leaders, and RevOps replace a pile of separate tools with one platform. Customers include HubSpot, Greenhouse, Seismic, Deel, Intercom, Cursor, and Dremio.
+
+
+Point of View: Intelligence doesn't create outcomes. Execution does. The best AI agents don't just create more work to review. They help sales teams do the right things, over and over. Nooks agents learn from every call, email, and workflow your team runs. Each one teaches the agents how your team actually sells, so they keep getting better.
+
+
+Key Benefits:
+
+
+* Replace 4–10 sales tools (dialer, sequencer, intent data, coaching) with one platform where AI agents and reps work together
+* 2x more email replies, 3x more prospects reached, and up to 80% less admin work
+* Spot buying signals in real time, so reps work the hottest accounts first on any channel
+* Every call gets scored automatically, and reps practice objections with AI roleplay, so new reps ramp faster
+* Battlecards pop up during live calls to help reps handle objections in the moment
+* Agents get smarter with every interaction, because they work inside your sales motion instead of watching from outside
+* RevOps gets one clear view of the whole stack, which makes decisions easier
+* Sales leaders (VP Sales/CRO) get more meetings, more pipeline, and faster ramp without hiring more reps
+
+
+Key Features:
+
+
+* [AI Sequencing](https://www.nooks.ai/ai-sequencing): Campaigns across calls, email, SMS, and social that adjust in real time based on buying signals and what's working for reps
+* [AI Dialer](https://www.nooks.ai/ai-dialer): Parallel dialing that calls many numbers at once, detects a live person in milliseconds, drops voicemails for you, protects against spam flags, and includes a virtual salesfloor
+* [Signals and Intelligence](https://www.nooks.ai/signals-intelligence): Pulls intent data from many sources to show which prospects to work first, then writes personal outreach for them
+* [AI Coaching](https://www.nooks.ai/ai-coaching): Scores every call, gives reps AI bots to practice objections with, shows battlecards during live calls, and keeps a call library
+* [Virtual Salesfloor](https://www.nooks.ai/categories/virtual-salesfloor): A shared calling room where teams listen in, coach live, and learn from each other
+* [AI Agents](https://www.nooks.ai/ai-sequencing): Agents that research prospects, find verified contact info, and draft personal messages, saving reps hours of busywork
+
+
+Key Use Cases:
+
+
+* [SDR and AE teams replacing Outreach or Salesloft](https://www.nooks.ai/ai-sequencing) with an AI-native sequencing platform
+* [Sales teams pairing AI agents with reps](https://www.nooks.ai/ai-sequencing) so the agents handle research, account picking, and follow-up
+* [Sales teams cutting down a messy tool stack](https://www.nooks.ai/growthops) to one platform
+* [Sales managers automating call scoring and coaching](https://www.nooks.ai/ai-coaching) across the whole team
+* [Outbound teams making lots of calls](https://www.nooks.ai/ai-dialer) with live AI help during each one
+* [Prospecting teams using intent signals](https://www.nooks.ai/signals-intelligence) to find accounts that are ready to buy
+
+
+## Core Platform
+
+
+* [AI Sequencing](https://www.nooks.ai/ai-sequencing): Builds and runs call, email, SMS, and social campaigns based on real-time buying signals. Customers like Greenhouse report 2x email replies and 70% more pipeline.
+* [AI Dialer](https://www.nooks.ai/ai-dialer): Parallel dialing that detects a live person in milliseconds. Includes auto voicemails, live battlecards, spam protection, and a virtual salesfloor for coaching. Built for more connects and more conversations per hour.
+* [Signals and Intelligence](https://www.nooks.ai/signals-intelligence): Gathers intent signals from your own data and outside sources, ranks the hottest accounts, and writes emails and call scripts for them. Customers report 2x pipeline and 4x faster prospecting.
+* [AI Coaching](https://www.nooks.ai/ai-coaching): Scores every call to find skill gaps, creates AI practice bots for reps, shows battlecards during calls, and gives managers clear dashboards.
+* [Pricing](https://www.nooks.ai/pricing): Nooks pricing plans and packages.
+* [Request a Demo](https://www.nooks.ai/request-demo): Book a demo of the Nooks platform.
+
+
+## Blog
+
+
+* [Blog: All Posts](https://www.nooks.ai/blog): The full Nooks blog. Covers AI sequencing, parallel dialing, AI coaching, prospecting, buying signals, RevOps, and why the Revenue Agent Platform is replacing older sales engagement tools.
+* [Blog: Agent Workspace](https://www.nooks.ai/categories/agent-workspace): Posts that explain Nooks' category, the Revenue Agent Platform for Sales, and why it comes after task-based sales engagement platforms.
+* [Blog: Cold Calling](https://www.nooks.ai/categories/cold-calling): Posts on parallel dialing, auto dialers, phone systems, and cold calling tips.
+* [Blog: Sales Toolkit / Playbooks](https://www.nooks.ai/categories/playbooks): Sales playbooks from top SDRs and AEs.
+* [Blog: Engineering](https://www.nooks.ai/categories/engineering-posts): Technical posts on how Nooks builds its AI sequencing and dialing systems.
+* [News & Media](https://www.nooks.ai/news-media): Press coverage and company news.
+
+
+## Customer Stories
+
+
+* [Cursor](https://www.nooks.ai/customer-success/how-cursor-replaced-outreach-and-booked-300-meetings-in-2-months): Booked 300 meetings in 2 months and made their pipeline 4x more efficient after replacing Outreach with Nooks.
+* [Dremio](https://www.nooks.ai/customer-success/how-dremio-eliminated-a-15-tool-outbound-stack-and-accelerated-execution-25x-with-nooks): Cut a 15-tool outbound stack and moved 25x faster with Nooks.
+* [Greenhouse](https://www.nooks.ai/customer-success/greenhouse): Grew pipeline 70% and hit 10x pipeline growth with AI sequencing and dialing.
+* [HubSpot](https://www.nooks.ai/customer-success/hubspot): Lifted pipeline 24% per rep with AI-powered cold calling.
+* [Seismic](https://www.nooks.ai/customer-success/seismic): Gets 80% of pipeline from cold calls across 600 accounts and 3 continents.
+* [Coder](https://www.nooks.ai/customer-success/engineering-intent-how-coder-uses-ai-signals-to-outpace-benchmarks-by-600): Booked meetings 6x faster and got new reps ramped in 6 days by letting AI handle account research.
+* [Rasa](https://www.nooks.ai/customer-success/how-rasa-unified-sequencing-and-dialing-to-drive-a-4x-increase-in-meeting-rates): Grew meeting rates from under 1% to 3.9% and cut BDR ramp from 2-3 months to about 2 weeks by moving sequencing and dialing into Nooks.
+* [Hungry](https://www.nooks.ai/customer-success/how-hungry-used-nooks-ai-agents-to-triple-prospect-engagement-and-double-mrr-per-rep): Doubled new MRR per rep after moving its SDR team to Nooks.
+* [Relay](https://www.nooks.ai/customer-success/how-relay-network-modernized-outreach-and-built-a-unified-ai-engine-for-pipeline-with-nooks): Saved 90% of SDR time by moving outreach into Nooks.
+* [Modern Health](https://www.nooks.ai/customer-success/modern-health-books-60-of-their-pipeline-using-nooks-ai-prospector): Lifted meeting rates 50% by letting AI handle account research.
+* [Drata](https://www.nooks.ai/customer-success/how-drata-uses-ai-signals-to-drive-a-25-increase-in-meetings): Booked 25% more meetings using AI signals.
+* [All Customer Stories](https://www.nooks.ai/customer-success): The full library of Nooks customer stories across industries and company sizes.
+
+
+## Other Resources
+
+
+* [Wall of Love](https://www.nooks.ai/wall-of-love): Reviews and quotes from sales teams that use Nooks.
+* [SDR Job Hotlist](https://www.nooks.ai/sdr-job-board): Open SDR jobs at companies in the Nooks customer network.
+* [Events](https://www.nooks.ai/events): Nooks webinars, live sessions, and community events for outbound sales teams.
+
+
+## Company and Contact
+
+
+* [Careers](https://www.nooks.ai/careers): Open roles at Nooks.
+* [Trust Center](https://trust.nooks.ai/): Security, compliance, and data handling info.
+* [Login](https://app.nooks.in): Customer login.
+
+
+## Legal
+
+
+* [Privacy Policy](https://www.nooks.ai/privacy-policy): Nooks data privacy policy.
+* [Terms of Service](https://www.nooks.ai/terms-of-services): Nooks terms of service.
+* [Cookie Policy](https://www.nooks.ai/cookie-policy): How Nooks uses cookies.
+* [Responsible Disclosure](https://www.nooks.ai/responsible-disclosure-process): How to report a security issue.

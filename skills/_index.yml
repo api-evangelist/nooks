@@ -1,0 +1,25 @@
+generated: '2026-08-14'
+method: generated
+source: openapi/nooks-sequencing-openapi.yml + conventions/nooks-conventions.yml + errors/nooks-problem-types.yml + asyncapi/nooks-webhooks.yml
+note: >-
+  Generated packaged Agent Skills for the three marquee flows of the Nooks Sequencing API. Every
+  operationId below was verified verbatim against the harvested spec. Nooks publishes no
+  AGENTS.md or first-party skill files — searched developer.nooks.in, the help center, and
+  github.com/NooksApp.
+skills:
+- file: nooks-enroll-prospect-in-sequence.md
+  name: Enroll a prospect in a Nooks sequence
+  api: openapi/nooks-sequencing-openapi.yml
+  operations: [listSequences, getSequence, listProspects, getProspect, syncProspects, createSequenceState, getSequenceState, listSequenceStates, finishSequenceState, deleteSequenceState, getMe]
+  scopes: [sequences:read, prospects:read, prospects:write, sequence-states:read, sequence-states:write]
+- file: nooks-work-the-task-queue.md
+  name: Work a rep's Nooks task queue
+  api: openapi/nooks-sequencing-openapi.yml
+  operations: [getMe, listUsers, listTasks, getTask, createTask, updateTask, completeTask, skipTask, deleteTask, createProspectNote, createAccountNote]
+  scopes: [users:read, tasks:read, tasks:write, prospects:read, accounts:read, notes:write]
+- file: nooks-ingest-call-activity.md
+  name: Ingest Nooks call and email activity
+  api: openapi/nooks-sequencing-openapi.yml
+  operations: [listCalls, getCall, listCallDispositions, getCallDisposition, listEmails, getEmail, listMailboxes, getMailbox, getEmailTemplate, getProspect, getUser]
+  scopes: [calls:read, call-dispositions:read, emails:read, email-templates:read, mailboxes:read, prospects:read, users:read]
+  also_covers: call.logged webhook consumption and signature verification

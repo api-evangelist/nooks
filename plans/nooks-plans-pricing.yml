@@ -1,0 +1,25 @@
+generated: '2026-08-14'
+method: searched
+source: https://www.nooks.ai/pricing
+plan_count: 0
+public_pricing: false
+model: contact-sales
+note: >-
+  Nooks publishes NO pricing tiers. https://www.nooks.ai/pricing (HTTP 200) carries a pricing
+  section header and a lead-capture form only: "Get in touch with the team to get a custom quote
+  and start growing your pipeline today." There are no named plans, no prices, no billing period,
+  no included quota, and no overage terms anywhere on the site, the developer portal, or the help
+  center. plan_count: 0 is a measured absence, not an unchecked field.
+plans: []
+api_access:
+  note: >-
+    No separate API price, plan gate, or free tier is documented. API keys are generated from
+    Developer Settings → API Keys inside an existing Nooks workspace, so API access appears to
+    follow the (unpublished) subscription rather than being sold on its own.
+  self_service_signup: false
+  signup_url: https://app.nooks.in
+x-evidence:
+- url: https://www.nooks.ai/pricing
+  status: 200
+- url: https://developer.nooks.in/
+  status: 200

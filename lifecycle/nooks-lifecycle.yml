@@ -1,0 +1,60 @@
+generated: '2026-08-14'
+method: searched
+source: https://developer.nooks.in/openapi.yml
+docs: https://developer.nooks.in/
+versioning:
+  scheme: uri-path
+  current: v1
+  base: https://partner-api.nooks.in/v1
+  spec_version: 0.1.0
+  spec_version_note: >-
+    info.version is 0.1.0 while the served path is /v1. The 0.x document version is an honest
+    signal that the contract is young and still moving; treat it as pre-1.0.
+deprecation:
+  policy_url: null
+  policy_published: false
+  sunset_header: unknown
+  rfc8594: unknown
+  note: >-
+    No deprecation or sunset policy is published on the developer portal, in the OpenAPI, or in
+    the help center. No operation, parameter, or schema in the spec carries `deprecated: true`.
+    An honest absence — Nooks has published no deprecation contract, so consumers have no stated
+    notice period. NO `Deprecation` pointer is wired in apis.yml as a result.
+deprecated_operations: []
+sla:
+  url: null
+  uptime_target: null
+  note: No published SLA or uptime commitment found on the pricing page, developer portal, or trust center.
+status_page:
+  url: https://status.nooks.in/
+  provider: Atlassian Statuspage
+  page_id: 01JM0KB4G01HGADVAQ0EXACG7W
+  api: https://status.nooks.in/api/v2/status.json
+  history: https://status.nooks.in/history
+  verified: probed
+  note: >-
+    status.nooks.ai does not resolve; nooks.statuspage.io returns "DONOTUSE Status - Page
+    Inactive". The live page is on the .in domain.
+changelog:
+  url: null
+  published: false
+  note: >-
+    Probed https://developer.nooks.in/changelog (404) and https://www.nooks.ai/changelog (404).
+    The Scalar-rendered developer portal has no changelog surface and the help center carries no
+    dated API release notes. No `ChangeLog` pointer is wired.
+support:
+  help_center: https://nooks.help.usepylon.com/
+  api_support_email: support@nooks.in
+  contact_source: openapi info.contact
+x-evidence:
+- url: https://status.nooks.in/api/v2/status.json
+  status: 200
+- url: https://developer.nooks.in/changelog
+  status: 404
+- url: https://www.nooks.ai/changelog
+  status: 404
+- url: https://nooks.statuspage.io
+  status: 200
+  note: 'inactive placeholder page: "DONOTUSE Status - Page Inactive"'
+- url: https://developer.nooks.in/openapi.yml
+  status: 200

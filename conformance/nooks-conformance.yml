@@ -1,0 +1,104 @@
+generated: '2026-08-14'
+method: derived
+source: openapi/nooks-sequencing-openapi.yml + well-known/ + security/nooks-trust-center.yml
+docs: https://developer.nooks.in/
+standards:
+- id: openapi-3.1
+  conforms: true
+  evidence: 'openapi: 3.1.0 with 30 paths / 37 operations, parses cleanly'
+- id: oauth2
+  conforms: true
+  evidence: >-
+    Authorization-code + PKCE flow at https://oauth.nooks.in with authorize/token/revoke
+    endpoints and 24 published scopes.
+- id: oauth2-pkce-rfc7636
+  conforms: true
+  evidence: 'code_challenge_methods_supported: [S256] in the authorization-server metadata'
+- id: rfc8414-authorization-server-metadata
+  conforms: true
+  evidence: https://oauth.nooks.in/.well-known/oauth-authorization-server returns 200 JSON
+- id: rfc9728-protected-resource-metadata
+  conforms: true
+  evidence: https://mcp.nooks.in/.well-known/oauth-protected-resource returns 200 JSON naming the authorization server
+- id: rfc7517-jwks
+  conforms: true
+  evidence: https://oauth.nooks.in/.well-known/jwks.json returns 200 with an RSA key set
+- id: rfc6749-token-revocation
+  conforms: true
+  evidence: 'revocation_endpoint: https://oauth.nooks.in/oauth/revoke'
+- id: oauth2-refresh-token-rotation
+  conforms: true
+  evidence: >-
+    Spec documents 90-day refresh rotation with reuse detection — refresh tokens are invalidated
+    on first re-use.
+- id: mcp
+  conforms: true
+  evidence: Hosted remote MCP server at https://mcp.nooks.in/ answering JSON-RPC over HTTP (401 anonymously)
+- id: openid-connect
+  conforms: false
+  evidence: /.well-known/openid-configuration returns 404 on every host; no id_token, no OIDC scopes
+- id: rfc9457-problem-details
+  conforms: false
+  evidence: >-
+    Errors use a proprietary {error:{code,message},traceId} envelope served as application/json,
+    not application/problem+json
+- id: rfc8594-sunset-header
+  conforms: false
+  evidence: No deprecation or sunset policy published; no operation marked deprecated
+- id: rfc9116-security-txt
+  conforms: false
+  evidence: /.well-known/security.txt returns 404 on all five Nooks hosts
+- id: rfc8615-well-known-agent-card
+  conforms: false
+  evidence: /.well-known/agent-card.json and /.well-known/agent.json return 404 on all five hosts
+- id: asyncapi
+  conforms: false
+  evidence: >-
+    No AsyncAPI document published. The event surface is declared as an OpenAPI 3.1 top-level
+    webhooks block instead.
+- id: cursor-pagination
+  conforms: true
+  evidence: 'page[size] + page[after]/page[before] opaque cursors on all list endpoints, max 100'
+- id: idempotency
+  conforms: false
+  evidence: >-
+    No Idempotency-Key header or parameter anywhere in the spec. One operation
+    (finishSequenceState) is naturally idempotent and the webhook guide defines a consumer-side
+    dedup key, but writes carry no idempotency contract.
+- id: hmac-webhook-signing
+  conforms: true
+  evidence: >-
+    x-webhook-signature header, HMAC-SHA256 over '<timestamp>.<raw_body>', base64, 5-minute
+    replay window, timing-safe comparison required
+- id: soc2-type-2
+  conforms: true
+  evidence: SafeBase trust center at https://trust.nooks.ai/ — SOC 2 Type 2 report available
+- id: soc3
+  conforms: true
+  evidence: SafeBase trust center at https://trust.nooks.ai/
+- id: iso-27001-2022
+  conforms: true
+  evidence: ISO/IEC 27001:2022 certificate on https://trust.nooks.ai/
+- id: gdpr
+  conforms: true
+  evidence: https://trust.nooks.ai/ + https://www.nooks.ai/privacy-policy
+- id: ccpa
+  conforms: true
+  evidence: https://trust.nooks.ai/
+- id: eu-us-dpf
+  conforms: true
+  evidence: EU-US Data Privacy Framework listed on https://trust.nooks.ai/
+- id: pci-dss
+  conforms: false
+  evidence: Not claimed; Nooks is not a payments provider
+- id: hipaa
+  conforms: false
+  evidence: Not claimed on the trust center
+- id: fedramp
+  conforms: false
+  evidence: Not claimed on the trust center
+summary:
+  conforms: 17
+  does_not_conform: 9
+  compliance_program: https://trust.nooks.ai/
+  compliance_provider: SafeBase
