@@ -1,0 +1,462 @@
+openapi: 3.2.0
+info:
+  title: Nooks Sequencing Notes API
+  version: 0.1.0
+  description: "The Nooks Sequencing API provides programmatic access to manage sequences, tasks, templates, and prospect engagement workflows created using the Nooks SEP.\n\n## Authentication\n\nSend a bearer token in the `Authorization` header:\n```\nAuthorization: Bearer <token>\n```\n\nTwo token types are accepted on the same header — the API detects which\nformat you sent and validates accordingly. If you already have a token,\npaste it into the Authentication panel and skip the flow setup.\n\n### API keys\n\nLong-lived, workspace-scoped. Best for backend integrations and\nserver-to-server automation. Generate one from **Developer Settings →\nAPI Keys** in your Nooks workspace. API keys are prefixed `nooks-api-`\nand have full read/write access within the owning workspace.\n\n### OAuth 2.0 access tokens\n\nShort-lived (1 hour), user-scoped, scope-limited JWTs issued by\n`https://oauth.nooks.in` via the standard authorization-code + PKCE flow.\nBest for third-party apps acting on behalf of a specific user — the token\ncarries that user's identity and a subset of scopes the user consented\nto. Refresh tokens rotate every 90 days and are invalidated on first\nre-use (refresh-token reuse detection).\n\n**Endpoints:**\n\n- Authorize: `https://oauth.nooks.in/oauth/authorize`\n- Token: `https://oauth.nooks.in/oauth/token`\n- JWKS: `https://oauth.nooks.in/.well-known/jwks.json`\n- Server metadata (RFC 8414): `https://oauth.nooks.in/.well-known/oauth-authorization-server`\n\n**Available scopes:**\n\n| Scope | Grants |\n| --- | --- |\n| `prospects:read` | View your prospects |\n| `prospects:write` | Create and update prospects |\n| `sequences:read` | View your sequences |\n| `sequences:write` | Create and update sequences |\n| `sequence-steps:read` | View sequence steps |\n| `sequence-states:read` | View sequence enrollments |\n| `sequence-states:write` | Enroll prospects and manage enrollments |\n| `tasks:read` | View your tasks |\n| `tasks:write` | Create, update, complete, skip, and delete tasks |\n| `calls:read` | View your calls |\n| `calls:write` | Create and update calls |\n| `call-dispositions:read` | View call dispositions |\n| `emails:read` | View your emails |\n| `emails:write` | Create and update emails |\n| `mailboxes:read` | View connected mailboxes |\n| `users:read` | View users in your workspace |\n| `accounts:read` | View accounts (companies) in your workspace |\n| `notes:write` | Create notes on CRM-backed prospects and accounts |\n| `opportunities:read` | View opportunities (deals) in your workspace |\n| `search:read` | Search across your prospects, accounts, and other records |\n\n## Rate Limiting\nAPI requests are rate limited per workspace and per endpoint in a fixed\none-minute window. Separate endpoint buckets do not share quota, except\nroutes without an explicit limit use the shared default bucket.\n\nEvery response includes these headers:\n- `X-RateLimit-Limit` -- maximum requests allowed in the current per-minute window\n- `X-RateLimit-Remaining` -- requests remaining in the current window\n- `X-RateLimit-Reset` -- seconds until the current window resets\n\nWhen the limit is exceeded the API returns `429 Too Many Requests` with a\n`Retry-After` header indicating how many seconds to wait before retrying.\n\n**Current limits:**\n\n| Endpoint class | Methods | Limit |\n| --- | --- | --- |\n| List reads: `/sequences`, `/emails`, `/users`, `/sequenceStates`, `/prospects`, `/mailboxes`, `/calls`, `/sequenceSteps`, `/callDispositions`, `/tasks`, `/accounts` | `GET` | 300 requests/minute per endpoint |\n| Read by ID: `/sequences/{id}`, `/emails/{id}`, `/users/{id}`, `/sequenceStates/{id}`, `/prospects/{id}`, `/mailboxes/{id}`, `/calls/{id}`, `/sequenceSteps/{id}`, `/callDispositions/{id}`, `/tasks/{id}`, `/accounts/{id}`, `/emailTemplate/{id}` | `GET` | 600 requests/minute per endpoint |\n| Sequence writes: `/sequences`, `/sequences/{id}` | `POST`, `PATCH` | 120 requests/minute per endpoint |\n| Sequence state writes: `/sequenceStates`, `/sequenceStates/{id}`, `/sequenceStates/{id}/actions/finish` | `POST`, `DELETE` | 120 requests/minute per endpoint |\n| Task writes: `/tasks`, `/tasks/{id}`, `/tasks/{id}/complete`, `/tasks/{id}/skip` | `POST`, `PATCH`, `DELETE` | 120 requests/minute per endpoint |\n| CRM note writes: `/prospects/{id}/notes`, `/accounts/{id}/notes` | `POST` | 30 requests/minute per endpoint |\n| `/integrations/prospects/sync` | `POST` | 10 requests/minute |\n| Any other endpoint | Any | 30 requests/minute, shared default bucket |\n\n## Pagination\nList endpoints support cursor-based pagination using the `page[size]` and `page[after]`/`page[before]` query parameters.\n- Maximum page size: 100\n- Default page size: 50\n\n## Include (Inline Expansion)\nMost GET endpoints support an `include` query parameter that expands related `ReferenceObject` fields inline,\neliminating the need for follow-up API calls.\n\n**Format:** `?include=field1,field2` (comma-separated field names)\n\n**Without include:**\n```json\nGET /v1/prospects/123\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    { \"id\": \"ss-1\", \"_href\": \"/v1/sequenceStates/ss-1\" }\n  ]\n}\n```\n\n**With `include=sequenceStates`:**\n```json\nGET /v1/prospects/123?include=sequenceStates\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    {\n      \"id\": \"ss-1\",\n      \"_href\": \"/v1/sequenceStates/ss-1\",\n      \"state\": \"active\",\n      \"sequence\": { \"id\": \"seq-1\", \"_href\": \"/v1/sequences/seq-1\" },\n      \"prospect\": { \"id\": \"123\", \"_href\": \"/v1/prospects/123\" },\n      \"creator\": { \"id\": \"u-1\", \"_href\": \"/v1/users/u-1\" },\n      \"sequenceStep\": null,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"updatedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ]\n}\n```\n\nThe expanded object is a superset of `ReferenceObject` — it keeps `id` and `_href` and adds all DTO fields.\nThe response shape is unchanged; the field just contains richer data.\n\n**Hard constraints (enforced with 400 errors):**\n- **Max 3 includes per request.** Requesting more than 3 comma-separated values returns `400: \"include accepts at most 3 values\"`.\n- **GET endpoints only.** POST, PATCH, and DELETE endpoints do not accept `include`.\n- **No nested includes.** Only top-level field names are valid (e.g., `sequenceStates`). Dot-notation like `sequenceStates.prospect` returns 400.\n- **`account` on Prospect is not includable.** Requesting `include=account` returns 400.\n\nEach endpoint's `include` parameter lists the valid field names for that resource.\n"
+  contact:
+    name: Nooks API Support
+    email: support@nooks.in
+    url: https://www.nooks.in
+  license:
+    name: Proprietary
+  x-logo:
+    url: ./nooks-logo.svg
+    altText: Nooks Logo
+    href: https://www.nooks.ai
+servers:
+- url: https://partner-api.nooks.in/v1
+  description: Production API
+security:
+- BearerAuth: []
+tags:
+- name: Notes
+  description: Create CRM notes on prospects and accounts
+paths:
+  /prospects/{id}/notes:
+    post:
+      operationId: createProspectNote
+      summary: Create a prospect note
+      description: "Creates a CRM note on a CRM-backed prospect. The prospect must be\nsourced from Salesforce or HubSpot, and `data.integrationType` must\nmatch that CRM source.\n\nExample:\n```bash\ncurl -X POST 'https://partner-api.nooks.in/v1/prospects/990e8400-e29b-41d4-a716-446655440020/notes' \\\n  -H \"Authorization: Bearer nooks-api-...\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"data\": {\n      \"text\": \"Follow up after legal review.\",\n      \"integrationType\": \"salesforce\"\n    }\n  }'\n```\n"
+      tags:
+      - Notes
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the prospect
+        schema:
+          type: string
+          format: uuid
+        example: 990e8400-e29b-41d4-a716-446655440020
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNoteRequest'
+            example:
+              data:
+                text: Follow up after legal review.
+                integrationType: salesforce
+      responses:
+        '201':
+          description: Note successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+              example:
+                id: bb0e8400-e29b-41d4-a716-446655440080
+                externalId: 00TABC123DEF456
+                text: Follow up after legal review.
+                associatedType: prospect
+                associated:
+                  id: 990e8400-e29b-41d4-a716-446655440020
+                  _href: /v1/prospects/990e8400-e29b-41d4-a716-446655440020
+                integrationType: salesforce
+                userExternalId: 005ABC123DEF456
+                userName: Sam Seller
+                externalCreatedAt: '2026-07-09T16:00:00.000Z'
+                externalUpdatedAt: '2026-07-09T16:00:00.000Z'
+                createdAt: '2026-07-09T16:00:01.000Z'
+                updatedAt: '2026-07-09T16:00:01.000Z'
+        '400':
+          description: Malformed body (`Error`), or the CRM isn't usable for the acting user (`NO_CRM_CONNECTION`). See the `NoCrmConnectionError` schema.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/Error'
+                - $ref: '#/components/schemas/NoCrmConnectionError'
+              example:
+                error:
+                  code: NO_CRM_CONNECTION
+                  message: The user this request acts as has no salesforce connection in Nooks. Connect salesforce for that user and try again — API-key requests act as a workspace admin.
+                  integrationType: salesforce
+                traceId: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: 'Unprocessable entity. Possible causes:
+
+            - `integrationType` does not match the prospect''s CRM source
+
+            - The CRM rejected the note creation request
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: UNPROCESSABLE_ENTITY
+                  message: Unprocessable entity
+                  details:
+                    message: integrationType must match the prospect source (hubspot)
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /accounts/{id}/notes:
+    post:
+      operationId: createAccountNote
+      summary: Create an account note
+      description: "Creates a CRM note on a CRM-backed account. The account must be\nsourced from Salesforce or HubSpot, and `data.integrationType` must\nmatch that CRM source.\n\nExample:\n```bash\ncurl -X POST 'https://partner-api.nooks.in/v1/accounts/aa0e8400-e29b-41d4-a716-446655440030/notes' \\\n  -H \"Authorization: Bearer nooks-api-...\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"data\": {\n      \"text\": \"Champion moved teams; confirm new buying committee.\",\n      \"integrationType\": \"hubspot\"\n    }\n  }'\n```\n"
+      tags:
+      - Notes
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the account
+        schema:
+          type: string
+          format: uuid
+        example: aa0e8400-e29b-41d4-a716-446655440030
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNoteRequest'
+            example:
+              data:
+                text: Champion moved teams; confirm new buying committee.
+                integrationType: hubspot
+      responses:
+        '201':
+          description: Note successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+              example:
+                id: cc0e8400-e29b-41d4-a716-446655440081
+                externalId: '28491827364'
+                text: Champion moved teams; confirm new buying committee.
+                associatedType: account
+                associated:
+                  id: aa0e8400-e29b-41d4-a716-446655440030
+                  _href: /v1/accounts/aa0e8400-e29b-41d4-a716-446655440030
+                integrationType: hubspot
+                userExternalId: null
+                userName: Sam Seller
+                externalCreatedAt: '2026-07-09T16:00:00.000Z'
+                externalUpdatedAt: '2026-07-09T16:00:00.000Z'
+                createdAt: '2026-07-09T16:00:01.000Z'
+                updatedAt: '2026-07-09T16:00:01.000Z'
+        '400':
+          description: Malformed body (`Error`), or the CRM isn't usable for the acting user (`NO_CRM_CONNECTION`). See the `NoCrmConnectionError` schema.
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - $ref: '#/components/schemas/Error'
+                - $ref: '#/components/schemas/NoCrmConnectionError'
+              example:
+                error:
+                  code: NO_CRM_CONNECTION
+                  message: The user this request acts as has no hubspot connection in Nooks. Connect hubspot for that user and try again — API-key requests act as a workspace admin.
+                  integrationType: hubspot
+                traceId: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: 'Unprocessable entity. Possible causes:
+
+            - `integrationType` does not match the account''s CRM source
+
+            - The CRM rejected the note creation request
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: UNPROCESSABLE_ENTITY
+                  message: Unprocessable entity
+                  details:
+                    message: CRM rejected the note creation request
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  schemas:
+    CrmNoteIntegrationType:
+      type: string
+      enum:
+      - salesforce
+      - hubspot
+      description: The CRM integration where the note should be created.
+    NoCrmConnectionError:
+      type: object
+      description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
+
+        '
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+              - NO_CRM_CONNECTION
+              example: NO_CRM_CONNECTION
+            message:
+              type: string
+              description: Human-readable remediation text; display-only (do not parse).
+              example: Your salesforce connection is no longer valid. Reconnect salesforce in Nooks.
+            integrationType:
+              $ref: '#/components/schemas/SyncableCrmType'
+          required:
+          - code
+          - message
+          - integrationType
+        traceId:
+          type: string
+          description: Request trace id, for correlating with Nooks support.
+          example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
+      required:
+      - error
+    SyncableCrmType:
+      type: string
+      enum:
+      - salesforce
+      - hubspot
+      description: The CRM integration to sync from.
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
+    ReferenceObject:
+      type: object
+      description: A reference to a related resource
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
+    Note:
+      type: object
+      description: A CRM note created through Nooks.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the Nooks note record.
+          example: bb0e8400-e29b-41d4-a716-446655440080
+        externalId:
+          type: string
+          description: Unique identifier for the note in the destination CRM.
+          example: 00TABC123DEF456
+        text:
+          type: string
+          description: Note body text.
+          example: Follow up after legal review.
+        associatedType:
+          type: string
+          enum:
+          - prospect
+          - account
+          description: Type of resource the note is associated with.
+          example: prospect
+        associated:
+          $ref: '#/components/schemas/ReferenceObject'
+        integrationType:
+          $ref: '#/components/schemas/CrmNoteIntegrationType'
+        userExternalId:
+          type: string
+          nullable: true
+          description: External CRM user identifier for the user who authored the note, when available.
+          example: 005ABC123DEF456
+        userName:
+          type: string
+          nullable: true
+          description: Display name for the user who authored the note, when available.
+          example: Sam Seller
+        externalCreatedAt:
+          type: string
+          format: date-time
+          description: When the note was created in the destination CRM.
+          example: '2026-07-09T16:00:00.000Z'
+        externalUpdatedAt:
+          type: string
+          format: date-time
+          description: When the note was last updated in the destination CRM.
+          example: '2026-07-09T16:00:00.000Z'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the Nooks note record was created.
+          example: '2026-07-09T16:00:01.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the Nooks note record was last updated.
+          example: '2026-07-09T16:00:01.000Z'
+      required:
+      - id
+      - externalId
+      - text
+      - associatedType
+      - associated
+      - integrationType
+      - userExternalId
+      - userName
+      - externalCreatedAt
+      - externalUpdatedAt
+      - createdAt
+      - updatedAt
+    CreateNoteRequest:
+      type: object
+      description: Request body for creating a CRM note.
+      additionalProperties: false
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            text:
+              type: string
+              minLength: 1
+              maxLength: 65535
+              description: Note body text. Must contain at least one non-whitespace character.
+              example: Follow up after legal review.
+            integrationType:
+              $ref: '#/components/schemas/CrmNoteIntegrationType'
+          required:
+          - text
+          - integrationType
+      required:
+      - data
+  responses:
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    RateLimitExceeded:
+      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
+
+        rate limit (see headers in the rate-limiting section) or an
+
+        upstream CRM (Salesforce / HubSpot) rate limit hit while
+
+        servicing the request. Retry after the `Retry-After` interval.
+
+        '
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Rate limit exceeded
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: 'Bearer token sent in the `Authorization` header. Accepts either a
+
+        long-lived Nooks API key (`nooks-api-...`, from Developer Settings →
+
+        API Keys) or an OAuth 2.0 access token issued by
+
+        `https://oauth.nooks.in`. Use whichever you already have — the API
+
+        validates both formats on the same header. For full OAuth flow
+
+        details (authorize/token endpoints, scopes, refresh behavior) see
+
+        the Authentication section of this spec''s introduction.
+
+        '
+x-tagGroups:
+- name: API Reference
+  tags:
+  - Sequences
+  - SequenceSteps
+  - Emails
+  - Users
+  - SequenceStates
+  - Prospects
+  - Accounts
+  - Notes
+  - Mailboxes
+  - Calls
+  - CallDispositions
+  - Tasks
+  - EmailTemplates
+  - Introspection

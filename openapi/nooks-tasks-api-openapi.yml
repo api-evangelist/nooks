@@ -1,0 +1,1087 @@
+openapi: 3.2.0
+info:
+  title: Nooks Sequencing Tasks API
+  version: 0.1.0
+  description: "The Nooks Sequencing API provides programmatic access to manage sequences, tasks, templates, and prospect engagement workflows created using the Nooks SEP.\n\n## Authentication\n\nSend a bearer token in the `Authorization` header:\n```\nAuthorization: Bearer <token>\n```\n\nTwo token types are accepted on the same header — the API detects which\nformat you sent and validates accordingly. If you already have a token,\npaste it into the Authentication panel and skip the flow setup.\n\n### API keys\n\nLong-lived, workspace-scoped. Best for backend integrations and\nserver-to-server automation. Generate one from **Developer Settings →\nAPI Keys** in your Nooks workspace. API keys are prefixed `nooks-api-`\nand have full read/write access within the owning workspace.\n\n### OAuth 2.0 access tokens\n\nShort-lived (1 hour), user-scoped, scope-limited JWTs issued by\n`https://oauth.nooks.in` via the standard authorization-code + PKCE flow.\nBest for third-party apps acting on behalf of a specific user — the token\ncarries that user's identity and a subset of scopes the user consented\nto. Refresh tokens rotate every 90 days and are invalidated on first\nre-use (refresh-token reuse detection).\n\n**Endpoints:**\n\n- Authorize: `https://oauth.nooks.in/oauth/authorize`\n- Token: `https://oauth.nooks.in/oauth/token`\n- JWKS: `https://oauth.nooks.in/.well-known/jwks.json`\n- Server metadata (RFC 8414): `https://oauth.nooks.in/.well-known/oauth-authorization-server`\n\n**Available scopes:**\n\n| Scope | Grants |\n| --- | --- |\n| `prospects:read` | View your prospects |\n| `prospects:write` | Create and update prospects |\n| `sequences:read` | View your sequences |\n| `sequences:write` | Create and update sequences |\n| `sequence-steps:read` | View sequence steps |\n| `sequence-states:read` | View sequence enrollments |\n| `sequence-states:write` | Enroll prospects and manage enrollments |\n| `tasks:read` | View your tasks |\n| `tasks:write` | Create, update, complete, skip, and delete tasks |\n| `calls:read` | View your calls |\n| `calls:write` | Create and update calls |\n| `call-dispositions:read` | View call dispositions |\n| `emails:read` | View your emails |\n| `emails:write` | Create and update emails |\n| `mailboxes:read` | View connected mailboxes |\n| `users:read` | View users in your workspace |\n| `accounts:read` | View accounts (companies) in your workspace |\n| `notes:write` | Create notes on CRM-backed prospects and accounts |\n| `opportunities:read` | View opportunities (deals) in your workspace |\n| `search:read` | Search across your prospects, accounts, and other records |\n\n## Rate Limiting\nAPI requests are rate limited per workspace and per endpoint in a fixed\none-minute window. Separate endpoint buckets do not share quota, except\nroutes without an explicit limit use the shared default bucket.\n\nEvery response includes these headers:\n- `X-RateLimit-Limit` -- maximum requests allowed in the current per-minute window\n- `X-RateLimit-Remaining` -- requests remaining in the current window\n- `X-RateLimit-Reset` -- seconds until the current window resets\n\nWhen the limit is exceeded the API returns `429 Too Many Requests` with a\n`Retry-After` header indicating how many seconds to wait before retrying.\n\n**Current limits:**\n\n| Endpoint class | Methods | Limit |\n| --- | --- | --- |\n| List reads: `/sequences`, `/emails`, `/users`, `/sequenceStates`, `/prospects`, `/mailboxes`, `/calls`, `/sequenceSteps`, `/callDispositions`, `/tasks`, `/accounts` | `GET` | 300 requests/minute per endpoint |\n| Read by ID: `/sequences/{id}`, `/emails/{id}`, `/users/{id}`, `/sequenceStates/{id}`, `/prospects/{id}`, `/mailboxes/{id}`, `/calls/{id}`, `/sequenceSteps/{id}`, `/callDispositions/{id}`, `/tasks/{id}`, `/accounts/{id}`, `/emailTemplate/{id}` | `GET` | 600 requests/minute per endpoint |\n| Sequence writes: `/sequences`, `/sequences/{id}` | `POST`, `PATCH` | 120 requests/minute per endpoint |\n| Sequence state writes: `/sequenceStates`, `/sequenceStates/{id}`, `/sequenceStates/{id}/actions/finish` | `POST`, `DELETE` | 120 requests/minute per endpoint |\n| Task writes: `/tasks`, `/tasks/{id}`, `/tasks/{id}/complete`, `/tasks/{id}/skip` | `POST`, `PATCH`, `DELETE` | 120 requests/minute per endpoint |\n| CRM note writes: `/prospects/{id}/notes`, `/accounts/{id}/notes` | `POST` | 30 requests/minute per endpoint |\n| `/integrations/prospects/sync` | `POST` | 10 requests/minute |\n| Any other endpoint | Any | 30 requests/minute, shared default bucket |\n\n## Pagination\nList endpoints support cursor-based pagination using the `page[size]` and `page[after]`/`page[before]` query parameters.\n- Maximum page size: 100\n- Default page size: 50\n\n## Include (Inline Expansion)\nMost GET endpoints support an `include` query parameter that expands related `ReferenceObject` fields inline,\neliminating the need for follow-up API calls.\n\n**Format:** `?include=field1,field2` (comma-separated field names)\n\n**Without include:**\n```json\nGET /v1/prospects/123\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    { \"id\": \"ss-1\", \"_href\": \"/v1/sequenceStates/ss-1\" }\n  ]\n}\n```\n\n**With `include=sequenceStates`:**\n```json\nGET /v1/prospects/123?include=sequenceStates\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    {\n      \"id\": \"ss-1\",\n      \"_href\": \"/v1/sequenceStates/ss-1\",\n      \"state\": \"active\",\n      \"sequence\": { \"id\": \"seq-1\", \"_href\": \"/v1/sequences/seq-1\" },\n      \"prospect\": { \"id\": \"123\", \"_href\": \"/v1/prospects/123\" },\n      \"creator\": { \"id\": \"u-1\", \"_href\": \"/v1/users/u-1\" },\n      \"sequenceStep\": null,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"updatedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ]\n}\n```\n\nThe expanded object is a superset of `ReferenceObject` — it keeps `id` and `_href` and adds all DTO fields.\nThe response shape is unchanged; the field just contains richer data.\n\n**Hard constraints (enforced with 400 errors):**\n- **Max 3 includes per request.** Requesting more than 3 comma-separated values returns `400: \"include accepts at most 3 values\"`.\n- **GET endpoints only.** POST, PATCH, and DELETE endpoints do not accept `include`.\n- **No nested includes.** Only top-level field names are valid (e.g., `sequenceStates`). Dot-notation like `sequenceStates.prospect` returns 400.\n- **`account` on Prospect is not includable.** Requesting `include=account` returns 400.\n\nEach endpoint's `include` parameter lists the valid field names for that resource.\n"
+  contact:
+    name: Nooks API Support
+    email: support@nooks.in
+    url: https://www.nooks.in
+  license:
+    name: Proprietary
+  x-logo:
+    url: ./nooks-logo.svg
+    altText: Nooks Logo
+    href: https://www.nooks.ai
+servers:
+- url: https://partner-api.nooks.in/v1
+  description: Production API
+security:
+- BearerAuth: []
+tags:
+- name: Tasks
+  description: Manage tasks (one-off calls and email activities)
+paths:
+  /tasks:
+    get:
+      operationId: listTasks
+      summary: List tasks
+      description: "Returns a paginated list of tasks. Tasks represent individual outreach activities (calls, emails, etc.) assigned to users.\n\nExample:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/tasks?page[size]=50' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by prospect:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/tasks?filter[prospect][id]=770e8400-e29b-41d4-a716-446655440003' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by action type:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/tasks?filter[action]=call,manual_email' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by sequence:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/tasks?filter[sequence][id]=550e8400-e29b-41d4-a716-446655440000' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by account (joins through the task's prospect):\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/tasks?filter[account][id]=990e8400-e29b-41d4-a716-446655440099' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      tags:
+      - Tasks
+      parameters:
+      - $ref: '#/components/parameters/PageSize'
+      - $ref: '#/components/parameters/PageAfter'
+      - $ref: '#/components/parameters/PageBefore'
+      - $ref: '#/components/parameters/FilterId'
+      - name: filter[sequence][id]
+        in: query
+        description: Filter tasks belonging to a specific sequence
+        required: false
+        schema:
+          type: string
+          format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
+      - name: filter[sequenceStep][id]
+        in: query
+        description: Filter tasks tied to a specific sequence step
+        required: false
+        schema:
+          type: string
+          format: uuid
+        example: aa0e8400-e29b-41d4-a716-446655440030
+      - name: filter[prospect][id]
+        in: query
+        description: Filter tasks for a specific prospect
+        required: false
+        schema:
+          type: string
+          format: uuid
+        example: 770e8400-e29b-41d4-a716-446655440003
+      - name: filter[account][id]
+        in: query
+        description: 'Filter tasks associated with a specific account. Joins through
+
+          the task''s prospect (`Prospect.accountId`).
+
+          '
+        required: false
+        schema:
+          type: string
+          format: uuid
+        example: 990e8400-e29b-41d4-a716-446655440099
+      - name: filter[owner][id]
+        in: query
+        description: Filter tasks assigned to a specific user
+        required: false
+        schema:
+          type: string
+        example: KKLvN5wQoghWFwUvC75CZ12QM7I3
+      - name: filter[action]
+        in: query
+        description: 'Filter by action type (comma-separated). Valid values: call, manual_email, auto_email, manual_email_reply, auto_email_reply, basic_task, linkedin_connection_request, manual_linkedin_connection_request, manual_linkedin_message, automatic_linkedin_message, manual_sms, auto_sms'
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - call
+            - manual_email
+            - auto_email
+            - manual_email_reply
+            - auto_email_reply
+            - basic_task
+            - linkedin_connection_request
+            - manual_linkedin_connection_request
+            - manual_linkedin_message
+            - automatic_linkedin_message
+            - manual_sms
+            - auto_sms
+        style: form
+        explode: false
+        example:
+        - call
+        - manual_email
+      - name: filter[status]
+        in: query
+        description: 'Filter by status (comma-separated). Valid values: pending, ready, finished, skipped, failed'
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - pending
+            - ready
+            - finished
+            - skipped
+            - failed
+        style: form
+        explode: false
+        example:
+        - ready
+      - name: filter[priority]
+        in: query
+        description: 'Filter by priority (comma-separated). Valid values: low, normal, high, urgent'
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - low
+            - normal
+            - high
+            - urgent
+        style: form
+        explode: false
+        example:
+        - high
+        - urgent
+      - name: filter[dueAt][gte]
+        in: query
+        description: Filter tasks due at or after this timestamp (ISO 8601)
+        required: false
+        schema:
+          type: string
+          format: date-time
+        example: '2026-04-22T00:00:00Z'
+      - name: filter[dueAt][lte]
+        in: query
+        description: Filter tasks due at or before this timestamp (ISO 8601)
+        required: false
+        schema:
+          type: string
+          format: date-time
+        example: '2026-04-22T23:59:59Z'
+      - name: filter[completed]
+        in: query
+        description: 'Filter by completion state. Valid values: true, false'
+        required: false
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+        example: 'true'
+      - name: filter[sequenceState][state]
+        in: query
+        description: 'Filter by the state of the task''s sequence state (comma-separated). Valid values: active, paused, finished, null. The sentinel `null` matches one-off tasks not associated with a sequence.'
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - active
+            - paused
+            - finished
+            - 'null'
+        style: form
+        explode: false
+        example:
+        - active
+        - 'null'
+      - name: include
+        in: query
+        description: 'Comma-separated relations to expand inline. Valid values: `owner`, `prospect`, `sequence`, `sequenceState`, `sequenceStep`. Max 3.'
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - owner
+            - prospect
+            - sequence
+            - sequenceState
+            - sequenceStep
+          maxItems: 3
+        style: form
+        explode: false
+        example:
+        - owner
+        - prospect
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  links:
+                    $ref: '#/components/schemas/PaginationLinks'
+              example:
+                data:
+                - id: dd0e8400-e29b-41d4-a716-446655440050
+                  action: call
+                  completed: false
+                  dueAt: '2026-03-19T23:26:21.536Z'
+                  note: Initial outreach call
+                  status: ready
+                  priority: normal
+                  owner:
+                    id: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                    _href: /v1/users/KKLvN5wQoghWFwUvC75CZ12QM7I3
+                  prospect:
+                    id: 770e8400-e29b-41d4-a716-446655440003
+                    _href: /v1/prospects/770e8400-e29b-41d4-a716-446655440003
+                  sequence:
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    _href: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+                  sequenceState:
+                    id: 880e8400-e29b-41d4-a716-446655440010
+                    _href: /v1/sequenceStates/880e8400-e29b-41d4-a716-446655440010
+                  sequenceStep:
+                    id: aa0e8400-e29b-41d4-a716-446655440030
+                    _href: /v1/sequenceSteps/aa0e8400-e29b-41d4-a716-446655440030
+                  createdAt: '2026-03-18T10:00:00.000Z'
+                  updatedAt: '2026-03-18T10:00:00.000Z'
+                - id: dd1e8400-e29b-41d4-a716-446655440051
+                  action: call
+                  completed: false
+                  dueAt: '2026-03-20T15:00:00.000Z'
+                  note: Follow-up call
+                  status: ready
+                  priority: high
+                  owner:
+                    id: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                    _href: /v1/users/KKLvN5wQoghWFwUvC75CZ12QM7I3
+                  prospect:
+                    id: 990e8400-e29b-41d4-a716-446655440020
+                    _href: /v1/prospects/990e8400-e29b-41d4-a716-446655440020
+                  sequence: null
+                  sequenceState: null
+                  sequenceStep: null
+                  createdAt: '2026-03-18T12:00:00.000Z'
+                  updatedAt: '2026-03-18T12:00:00.000Z'
+                links:
+                  first: https://partner-api.nooks.in/v1/tasks?page[size]=50
+                  prev: null
+                  next: https://partner-api.nooks.in/v1/tasks?page[size]=50&page[after]=eyJpZCI6ImRkMWU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDA1MSIsInYiOjF9
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createTask
+      summary: Create a task
+      description: "Creates a one-off task (not associated with a sequence). The task is validated and synced to CRM automatically.\n\nExample:\n```bash\ncurl -X POST 'https://partner-api.nooks.in/v1/tasks' \\\n  -H \"Authorization: Bearer nooks-api-...\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"data\": {\n      \"action\": \"call\",\n      \"dueAt\": \"2026-03-19T23:26:21.536Z\",\n      \"ownerId\": \"KKLvN5wQoghWFwUvC75CZ12QM7I3\",\n      \"prospectId\": \"770e8400-e29b-41d4-a716-446655440003\",\n      \"note\": \"Test Call\",\n      \"priority\": \"normal\"\n    }\n  }'\n```\n"
+      tags:
+      - Tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Request body for creating a task
+              additionalProperties: false
+              properties:
+                data:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    action:
+                      type: string
+                      enum:
+                      - call
+                      - manual_email
+                      - manual_email_reply
+                      - basic_task
+                      - linkedin_connection_request
+                      - manual_linkedin_connection_request
+                      - manual_linkedin_message
+                      - manual_sms
+                      description: Type of task action
+                      example: call
+                    dueAt:
+                      type: string
+                      format: date-time
+                      description: When the task is due (ISO 8601 with timezone offset)
+                      example: '2026-03-19T23:26:21.536Z'
+                    ownerId:
+                      type: string
+                      minLength: 1
+                      maxLength: 128
+                      pattern: ^[A-Za-z0-9_-]{1,128}$
+                      description: ID of the user who owns this task (Firebase UID)
+                      example: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                    prospectId:
+                      type: string
+                      format: uuid
+                      description: ID of the prospect this task is for
+                      example: 770e8400-e29b-41d4-a716-446655440003
+                    note:
+                      type: string
+                      description: Optional note or instructions for the task
+                      example: Test Call
+                    priority:
+                      type: string
+                      enum:
+                      - low
+                      - normal
+                      - high
+                      - urgent
+                      default: normal
+                      description: Priority level of the task
+                      example: normal
+                  required:
+                  - action
+                  - dueAt
+                  - ownerId
+                  - prospectId
+              required:
+              - data
+            example:
+              data:
+                action: call
+                dueAt: '2026-03-19T23:26:21.536Z'
+                ownerId: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                prospectId: 770e8400-e29b-41d4-a716-446655440003
+                note: Test Call
+                priority: normal
+      responses:
+        '201':
+          description: Task successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: dd0e8400-e29b-41d4-a716-446655440050
+                action: call
+                completed: false
+                dueAt: '2026-03-19T23:26:21.536Z'
+                note: Test Call
+                status: ready
+                priority: normal
+                owner:
+                  id: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                  _href: /v1/users/KKLvN5wQoghWFwUvC75CZ12QM7I3
+                prospect:
+                  id: 770e8400-e29b-41d4-a716-446655440003
+                  _href: /v1/prospects/770e8400-e29b-41d4-a716-446655440003
+                sequence: null
+                sequenceState: null
+                sequenceStep: null
+                createdAt: '2026-03-18T10:00:00.000Z'
+                updatedAt: '2026-03-18T10:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: 'Unprocessable entity. Possible causes:
+
+            - Task creation prerequisites not met (e.g. prospect marked Do Not Call)
+
+            - `ownerId` is not a user in this workspace (use an id from `GET /v1/users`)
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                prospectDnc:
+                  summary: Prospect is marked Do Not Call
+                  value:
+                    error:
+                      code: UNPROCESSABLE_ENTITY
+                      message: Unprocessable entity
+                      details:
+                        message: 'Cannot create call task: prospect has been marked as Do Not Call'
+                ownerNotFound:
+                  summary: Owner is not a user in the workspace
+                  value:
+                    error:
+                      code: UNPROCESSABLE_ENTITY
+                      message: Unprocessable entity
+                      details:
+                        message: Owner user KKLvN5wQoghWFwUvC75CZ12QM7I3 not found in this workspace. Use a user id from GET /v1/users.
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /tasks/{id}:
+    get:
+      operationId: getTask
+      summary: Get task by ID
+      description: "Returns a single task by its unique identifier.\n\nExample:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/tasks/dd0e8400-e29b-41d4-a716-446655440050' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      tags:
+      - Tasks
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the task
+        schema:
+          type: string
+          format: uuid
+        example: dd0e8400-e29b-41d4-a716-446655440050
+      - name: include
+        in: query
+        description: 'Comma-separated relations to expand inline. Valid values: `owner`, `prospect`, `sequence`, `sequenceState`, `sequenceStep`. Max 3.'
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - owner
+            - prospect
+            - sequence
+            - sequenceState
+            - sequenceStep
+          maxItems: 3
+        style: form
+        explode: false
+        example:
+        - owner
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: dd0e8400-e29b-41d4-a716-446655440050
+                action: call
+                completed: false
+                dueAt: '2026-03-19T23:26:21.536Z'
+                note: Initial outreach call
+                status: ready
+                priority: normal
+                owner:
+                  id: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                  _href: /v1/users/KKLvN5wQoghWFwUvC75CZ12QM7I3
+                prospect:
+                  id: 770e8400-e29b-41d4-a716-446655440003
+                  _href: /v1/prospects/770e8400-e29b-41d4-a716-446655440003
+                sequence:
+                  id: 550e8400-e29b-41d4-a716-446655440000
+                  _href: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+                sequenceState:
+                  id: 880e8400-e29b-41d4-a716-446655440010
+                  _href: /v1/sequenceStates/880e8400-e29b-41d4-a716-446655440010
+                sequenceStep:
+                  id: aa0e8400-e29b-41d4-a716-446655440030
+                  _href: /v1/sequenceSteps/aa0e8400-e29b-41d4-a716-446655440030
+                createdAt: '2026-03-18T10:00:00.000Z'
+                updatedAt: '2026-03-18T10:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateTask
+      summary: Update a task
+      description: "Updates one or more fields on an existing task.\n\n**Updatable fields only** — only the following fields can be changed:\n- `dueAt` — reschedule the task to a new due date/time\n- `ownerId` — reassign the task to a different user\n- `priority` — change the task priority (`low`, `normal`, `high`, `urgent`)\n- `note` — update the task note (set to `null` to clear)\n\nAt least one field must be provided. All other task fields (action, prospect, sequence, etc.) are immutable through this endpoint.\n\nExample (reschedule):\n```bash\ncurl -X PATCH 'https://partner-api.nooks.in/v1/tasks/dd0e8400-e29b-41d4-a716-446655440050' \\\n  -H \"Authorization: Bearer nooks-api-...\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"data\": {\"dueAt\": \"2026-04-01T09:00:00.000Z\"}}'\n```\n\nExample (reassign + reprioritize):\n```bash\ncurl -X PATCH 'https://partner-api.nooks.in/v1/tasks/dd0e8400-e29b-41d4-a716-446655440050' \\\n  -H \"Authorization: Bearer nooks-api-...\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"data\": {\"ownerId\": \"ABC123\", \"priority\": \"high\"}}'\n```\n"
+      tags:
+      - Tasks
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the task
+        schema:
+          type: string
+          format: uuid
+        example: dd0e8400-e29b-41d4-a716-446655440050
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Fields to update on the task. At least one field is required.
+              additionalProperties: false
+              required:
+              - data
+              properties:
+                data:
+                  type: object
+                  description: 'The fields to update. Only `dueAt`, `ownerId`, `priority`, and `note` are
+
+                    accepted — all other fields are rejected. At least one must be provided.
+
+                    '
+                  minProperties: 1
+                  additionalProperties: false
+                  properties:
+                    dueAt:
+                      type: string
+                      format: date-time
+                      description: New due date/time for the task (ISO 8601 with timezone offset)
+                      example: '2026-04-01T09:00:00.000Z'
+                    ownerId:
+                      type: string
+                      minLength: 1
+                      maxLength: 128
+                      pattern: ^[A-Za-z0-9_-]{1,128}$
+                      description: ID of the user to reassign the task to (Firebase UID)
+                      example: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                    priority:
+                      type: string
+                      enum:
+                      - low
+                      - normal
+                      - high
+                      - urgent
+                      description: New priority level for the task
+                      example: high
+                    note:
+                      type: string
+                      nullable: true
+                      description: Updated note for the task. Set to null to clear.
+                      example: Follow up after the demo
+            example:
+              data:
+                dueAt: '2026-04-01T09:00:00.000Z'
+                priority: high
+      responses:
+        '200':
+          description: Task successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: dd0e8400-e29b-41d4-a716-446655440050
+                action: call
+                completed: false
+                dueAt: '2026-04-01T09:00:00.000Z'
+                note: Follow up after the demo
+                status: ready
+                priority: high
+                owner:
+                  id: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                  _href: /v1/users/KKLvN5wQoghWFwUvC75CZ12QM7I3
+                prospect:
+                  id: 770e8400-e29b-41d4-a716-446655440003
+                  _href: /v1/prospects/770e8400-e29b-41d4-a716-446655440003
+                sequence: null
+                sequenceState: null
+                sequenceStep: null
+                createdAt: '2026-03-18T10:00:00.000Z'
+                updatedAt: '2026-04-01T08:45:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: 'Unprocessable entity. Possible causes:
+
+            - The update violates task business rules
+
+            - `ownerId` is not a user in this workspace (use an id from `GET /v1/users`)
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                ownerNotFound:
+                  summary: New owner is not a user in the workspace
+                  value:
+                    error:
+                      code: UNPROCESSABLE_ENTITY
+                      message: Unprocessable entity
+                      details:
+                        message: Owner user KKLvN5wQoghWFwUvC75CZ12QM7I3 not found in this workspace. Use a user id from GET /v1/users.
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      operationId: deleteTask
+      summary: Delete a task
+      description: "Permanently deletes a task. If the task belongs to an active sequence enrollment,\nthe sequence is automatically advanced to the next step (or finished if it was the\nlast step) before deletion.\n\nExample:\n```bash\ncurl -X DELETE 'https://partner-api.nooks.in/v1/tasks/dd0e8400-e29b-41d4-a716-446655440050' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      tags:
+      - Tasks
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the task to delete
+        schema:
+          type: string
+          format: uuid
+        example: dd0e8400-e29b-41d4-a716-446655440050
+      responses:
+        '204':
+          description: Task successfully deleted (no content)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /tasks/{id}/complete:
+    post:
+      operationId: completeTask
+      summary: Complete a task
+      description: "Marks a task as completed. This triggers CRM sync and, for sequence tasks,\nautomatically advances the prospect to the next step in the sequence.\n\nExample:\n```bash\ncurl -X POST 'https://partner-api.nooks.in/v1/tasks/dd0e8400-e29b-41d4-a716-446655440050/complete' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      tags:
+      - Tasks
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the task to complete
+        schema:
+          type: string
+          format: uuid
+        example: dd0e8400-e29b-41d4-a716-446655440050
+      responses:
+        '200':
+          description: Task successfully completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: dd0e8400-e29b-41d4-a716-446655440050
+                action: call
+                completed: true
+                dueAt: '2026-03-19T23:26:21.536Z'
+                note: Initial outreach call
+                status: ready
+                priority: normal
+                owner:
+                  id: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                  _href: /v1/users/KKLvN5wQoghWFwUvC75CZ12QM7I3
+                prospect:
+                  id: 770e8400-e29b-41d4-a716-446655440003
+                  _href: /v1/prospects/770e8400-e29b-41d4-a716-446655440003
+                sequence: null
+                sequenceState: null
+                sequenceStep: null
+                createdAt: '2026-03-18T10:00:00.000Z'
+                updatedAt: '2026-03-19T23:30:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /tasks/{id}/skip:
+    post:
+      operationId: skipTask
+      summary: Skip a task
+      description: "Skips a task without completing the associated action. For sequence tasks,\nskipping advances the prospect to the next step in the sequence.\nThe task status will be updated to `skipped`.\n\nExample:\n```bash\ncurl -X POST 'https://partner-api.nooks.in/v1/tasks/dd0e8400-e29b-41d4-a716-446655440050/skip' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      tags:
+      - Tasks
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the task to skip
+        schema:
+          type: string
+          format: uuid
+        example: dd0e8400-e29b-41d4-a716-446655440050
+      responses:
+        '200':
+          description: Task successfully skipped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              example:
+                id: dd0e8400-e29b-41d4-a716-446655440050
+                action: call
+                completed: false
+                dueAt: '2026-03-19T23:26:21.536Z'
+                note: Initial outreach call
+                status: skipped
+                priority: normal
+                owner:
+                  id: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                  _href: /v1/users/KKLvN5wQoghWFwUvC75CZ12QM7I3
+                prospect:
+                  id: 770e8400-e29b-41d4-a716-446655440003
+                  _href: /v1/prospects/770e8400-e29b-41d4-a716-446655440003
+                sequence: null
+                sequenceState: null
+                sequenceStep: null
+                createdAt: '2026-03-18T10:00:00.000Z'
+                updatedAt: '2026-03-19T23:30:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  responses:
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
+    UnprocessableEntity:
+      description: 'Unprocessable entity - the request was well-formed but cannot be
+
+        processed. Typical causes: a referenced resource (prospect, sequence,
+
+        sequence step) does not exist or is in a state that prevents the
+
+        operation; a sequence-step task is missing required associations;
+
+        scheduling exceeds the 30-day limit.
+
+        '
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNPROCESSABLE_ENTITY
+              message: Unprocessable entity
+              details:
+                message: Referenced prospect does not exist
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid page[after] cursor
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+  schemas:
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
+    PaginationLinks:
+      type: object
+      description: 'Pagination links for navigating through results.
+
+        Links are returned as relative references (path + query) that
+
+        should be resolved against the base URL of the request.
+
+        '
+      properties:
+        first:
+          type: string
+          format: uri-reference
+          description: URL for the first page
+          example: /v1/sequences?page[size]=50
+        prev:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the previous page (null if on first page)
+          example: null
+        next:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the next page (null if on last page)
+          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    Task:
+      type: object
+      description: A task representing an outreach activity assigned to a user
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the task
+          example: dd0e8400-e29b-41d4-a716-446655440050
+        action:
+          type: string
+          enum:
+          - call
+          - manual_email
+          - auto_email
+          - manual_email_reply
+          - auto_email_reply
+          - basic_task
+          - linkedin_connection_request
+          - manual_linkedin_connection_request
+          - manual_linkedin_message
+          - automatic_linkedin_message
+          - manual_sms
+          - auto_sms
+          description: 'Type of action for this task:
+
+            - `call`: Phone call task
+
+            - `manual_email`: Manually composed email
+
+            - `auto_email`: Automatically sent email
+
+            - `manual_email_reply`: Manual email reply
+
+            - `auto_email_reply`: Automatic email reply
+
+            - `basic_task`: Generic manual task
+
+            - `linkedin_connection_request`: LinkedIn connection request
+
+            - `manual_linkedin_connection_request`: Manual LinkedIn connection request
+
+            - `manual_linkedin_message`: Manual LinkedIn message
+
+            - `automatic_linkedin_message`: Automatically sent LinkedIn message
+
+            - `manual_sms`: Manual SMS message
+
+            - `auto_sms`: Automatically sent SMS message
+
+            '
+          example: call
+        completed:
+          type: boolean
+          description: Whether the task has been completed
+          example: false
+        dueAt:
+          type: string
+          format: date-time
+          description: When the task is due
+          example: '2026-03-19T23:26:21.536Z'
+        note:
+          type: string
+          nullable: true
+          description: Optional note or instructions for the task
+          example: Initial outreach call
+        status:
+          type: string
+          nullable: true
+          description: Current status of the task (pending, ready, finished, skipped, failed)
+          example: ready
+        priority:
+          type: string
+          enum:
+          - low
+          - normal
+          - high
+          - urgent
+          description: Priority level of the task
+          example: normal
+        owner:
+          description: The user this task is assigned to
+          $ref: '#/components/schemas/ReferenceObject'
+        prospect:
+          description: The prospect this task is for
+          $ref: '#/components/schemas/ReferenceObject'
+        sequence:
+          nullable: true
+          description: The sequence this task belongs to (null for one-off tasks)
+          allOf:
+          - $ref: '#/components/schemas/ReferenceObject'
+        sequenceState:
+          nullable: true
+          description: The sequence enrollment this task belongs to (null for one-off tasks)
+          allOf:
+          - $ref: '#/components/schemas/ReferenceObject'
+        sequenceStep:
+          nullable: true
+          description: The sequence step this task was created from (null for one-off tasks)
+          allOf:
+          - $ref: '#/components/schemas/ReferenceObject'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the task was created
+          example: '2026-03-18T10:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the task was last updated
+          example: '2026-03-18T10:00:00.000Z'
+      required:
+      - id
+      - action
+      - completed
+      - dueAt
+      - note
+      - status
+      - priority
+      - owner
+      - prospect
+      - sequence
+      - sequenceState
+      - sequenceStep
+      - createdAt
+      - updatedAt
+    ReferenceObject:
+      type: object
+      description: A reference to a related resource
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
+  parameters:
+    PageSize:
+      name: page[size]
+      in: query
+      description: Number of items per page (max 100)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      example: 50
+    FilterId:
+      name: filter[id]
+      in: query
+      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
+      required: false
+      schema:
+        type: string
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
+      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
+    PageAfter:
+      name: page[after]
+      in: query
+      description: 'Cursor for fetching the next page. Opaque token returned by the
+
+        API in `links.next`; callers should treat it as opaque and only
+
+        pass values they received from a previous response. Malformed
+
+        cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    PageBefore:
+      name: page[before]
+      in: query
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: 'Bearer token sent in the `Authorization` header. Accepts either a
+
+        long-lived Nooks API key (`nooks-api-...`, from Developer Settings →
+
+        API Keys) or an OAuth 2.0 access token issued by
+
+        `https://oauth.nooks.in`. Use whichever you already have — the API
+
+        validates both formats on the same header. For full OAuth flow
+
+        details (authorize/token endpoints, scopes, refresh behavior) see
+
+        the Authentication section of this spec''s introduction.
+
+        '
+x-tagGroups:
+- name: API Reference
+  tags:
+  - Sequences
+  - SequenceSteps
+  - Emails
+  - Users
+  - SequenceStates
+  - Prospects
+  - Accounts
+  - Notes
+  - Mailboxes
+  - Calls
+  - CallDispositions
+  - Tasks
+  - EmailTemplates
+  - Introspection

@@ -1,0 +1,288 @@
+openapi: 3.2.0
+info:
+  title: Nooks Sequencing API
+  version: 0.1.0
+  description: "The Nooks Sequencing API provides programmatic access to manage sequences, tasks, templates, and prospect engagement workflows created using the Nooks SEP.\n\n## Authentication\n\nSend a bearer token in the `Authorization` header:\n```\nAuthorization: Bearer <token>\n```\n\nTwo token types are accepted on the same header — the API detects which\nformat you sent and validates accordingly. If you already have a token,\npaste it into the Authentication panel and skip the flow setup.\n\n### API keys\n\nLong-lived, workspace-scoped. Best for backend integrations and\nserver-to-server automation. Generate one from **Developer Settings →\nAPI Keys** in your Nooks workspace. API keys are prefixed `nooks-api-`\nand have full read/write access within the owning workspace.\n\n### OAuth 2.0 access tokens\n\nShort-lived (1 hour), user-scoped, scope-limited JWTs issued by\n`https://oauth.nooks.in` via the standard authorization-code + PKCE flow.\nBest for third-party apps acting on behalf of a specific user — the token\ncarries that user's identity and a subset of scopes the user consented\nto. Refresh tokens rotate every 90 days and are invalidated on first\nre-use (refresh-token reuse detection).\n\n**Endpoints:**\n\n- Authorize: `https://oauth.nooks.in/oauth/authorize`\n- Token: `https://oauth.nooks.in/oauth/token`\n- JWKS: `https://oauth.nooks.in/.well-known/jwks.json`\n- Server metadata (RFC 8414): `https://oauth.nooks.in/.well-known/oauth-authorization-server`\n\n**Available scopes:**\n\n| Scope | Grants |\n| --- | --- |\n| `prospects:read` | View your prospects |\n| `prospects:write` | Create and update prospects |\n| `sequences:read` | View your sequences |\n| `sequences:write` | Create and update sequences |\n| `sequence-steps:read` | View sequence steps |\n| `sequence-states:read` | View sequence enrollments |\n| `sequence-states:write` | Enroll prospects and manage enrollments |\n| `tasks:read` | View your tasks |\n| `tasks:write` | Create, update, complete, skip, and delete tasks |\n| `calls:read` | View your calls |\n| `calls:write` | Create and update calls |\n| `call-dispositions:read` | View call dispositions |\n| `emails:read` | View your emails |\n| `emails:write` | Create and update emails |\n| `mailboxes:read` | View connected mailboxes |\n| `users:read` | View users in your workspace |\n| `accounts:read` | View accounts (companies) in your workspace |\n| `notes:write` | Create notes on CRM-backed prospects and accounts |\n| `opportunities:read` | View opportunities (deals) in your workspace |\n| `search:read` | Search across your prospects, accounts, and other records |\n\n## Rate Limiting\nAPI requests are rate limited per workspace and per endpoint in a fixed\none-minute window. Separate endpoint buckets do not share quota, except\nroutes without an explicit limit use the shared default bucket.\n\nEvery response includes these headers:\n- `X-RateLimit-Limit` -- maximum requests allowed in the current per-minute window\n- `X-RateLimit-Remaining` -- requests remaining in the current window\n- `X-RateLimit-Reset` -- seconds until the current window resets\n\nWhen the limit is exceeded the API returns `429 Too Many Requests` with a\n`Retry-After` header indicating how many seconds to wait before retrying.\n\n**Current limits:**\n\n| Endpoint class | Methods | Limit |\n| --- | --- | --- |\n| List reads: `/sequences`, `/emails`, `/users`, `/sequenceStates`, `/prospects`, `/mailboxes`, `/calls`, `/sequenceSteps`, `/callDispositions`, `/tasks`, `/accounts` | `GET` | 300 requests/minute per endpoint |\n| Read by ID: `/sequences/{id}`, `/emails/{id}`, `/users/{id}`, `/sequenceStates/{id}`, `/prospects/{id}`, `/mailboxes/{id}`, `/calls/{id}`, `/sequenceSteps/{id}`, `/callDispositions/{id}`, `/tasks/{id}`, `/accounts/{id}`, `/emailTemplate/{id}` | `GET` | 600 requests/minute per endpoint |\n| Sequence writes: `/sequences`, `/sequences/{id}` | `POST`, `PATCH` | 120 requests/minute per endpoint |\n| Sequence state writes: `/sequenceStates`, `/sequenceStates/{id}`, `/sequenceStates/{id}/actions/finish` | `POST`, `DELETE` | 120 requests/minute per endpoint |\n| Task writes: `/tasks`, `/tasks/{id}`, `/tasks/{id}/complete`, `/tasks/{id}/skip` | `POST`, `PATCH`, `DELETE` | 120 requests/minute per endpoint |\n| CRM note writes: `/prospects/{id}/notes`, `/accounts/{id}/notes` | `POST` | 30 requests/minute per endpoint |\n| `/integrations/prospects/sync` | `POST` | 10 requests/minute |\n| Any other endpoint | Any | 30 requests/minute, shared default bucket |\n\n## Pagination\nList endpoints support cursor-based pagination using the `page[size]` and `page[after]`/`page[before]` query parameters.\n- Maximum page size: 100\n- Default page size: 50\n\n## Include (Inline Expansion)\nMost GET endpoints support an `include` query parameter that expands related `ReferenceObject` fields inline,\neliminating the need for follow-up API calls.\n\n**Format:** `?include=field1,field2` (comma-separated field names)\n\n**Without include:**\n```json\nGET /v1/prospects/123\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    { \"id\": \"ss-1\", \"_href\": \"/v1/sequenceStates/ss-1\" }\n  ]\n}\n```\n\n**With `include=sequenceStates`:**\n```json\nGET /v1/prospects/123?include=sequenceStates\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    {\n      \"id\": \"ss-1\",\n      \"_href\": \"/v1/sequenceStates/ss-1\",\n      \"state\": \"active\",\n      \"sequence\": { \"id\": \"seq-1\", \"_href\": \"/v1/sequences/seq-1\" },\n      \"prospect\": { \"id\": \"123\", \"_href\": \"/v1/prospects/123\" },\n      \"creator\": { \"id\": \"u-1\", \"_href\": \"/v1/users/u-1\" },\n      \"sequenceStep\": null,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"updatedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ]\n}\n```\n\nThe expanded object is a superset of `ReferenceObject` — it keeps `id` and `_href` and adds all DTO fields.\nThe response shape is unchanged; the field just contains richer data.\n\n**Hard constraints (enforced with 400 errors):**\n- **Max 3 includes per request.** Requesting more than 3 comma-separated values returns `400: \"include accepts at most 3 values\"`.\n- **GET endpoints only.** POST, PATCH, and DELETE endpoints do not accept `include`.\n- **No nested includes.** Only top-level field names are valid (e.g., `sequenceStates`). Dot-notation like `sequenceStates.prospect` returns 400.\n- **`account` on Prospect is not includable.** Requesting `include=account` returns 400.\n\nEach endpoint's `include` parameter lists the valid field names for that resource.\n"
+  contact:
+    name: Nooks API Support
+    email: support@nooks.in
+    url: https://www.nooks.in
+  license:
+    name: Proprietary
+  x-logo:
+    url: ./nooks-logo.svg
+    altText: Nooks Logo
+    href: https://www.nooks.ai
+servers:
+- url: https://partner-api.nooks.in/v1
+  description: Production API
+security:
+- BearerAuth: []
+tags:
+- name: Nooks Sequencing API
+paths: {}
+webhooks:
+  call.logged:
+    post:
+      summary: Call logged
+      operationId: callLoggedWebhook
+      description: "Fires once a call is fully finalized in Nooks (status, disposition,\nrecording, transcript, and notes resolved). Delivered as an HTTP `POST`\nto every webhook URL configured for the workspace.\n\n**Scope:** fires for *every* call logged in the workspace — inbound\nand outbound, dialer calls, manually logged calls, and calls placed\nfrom a Nooks sequence.\n\nConfigure endpoints in **Integrations → Webhooks** in your Nooks\nworkspace. On save Nooks performs a verification ping and returns a\nsigning key once — store it securely. For full setup and reference\nverification code in Node/Python/Ruby, see the\n[Nooks Webhooks Integration Guide](https://nooks.help.usepylon.com/articles/8109690071-Nooks-Webhooks-Integration-Guide).\n\n### Headers\n\nEach delivery includes:\n\n| Header | Description |\n| --- | --- |\n| `Content-Type` | `application/json` |\n| `x-webhook-signature` | `t=<unix-ms>,s=<base64-hmac-sha256>` — see verification steps below |\n\n### Signature verification\n\nThe signature is computed as:\n\n```\ns = base64(HMAC-SHA256(signingKey, timestamp + \".\" + raw_body))\n```\n\nSteps to verify on your endpoint:\n\n1. Parse the `x-webhook-signature` header to extract `t` and `s`.\n2. Rebuild the signed string `timestamp + \".\" + raw_body` using the\n   **unparsed** request body (do not re-serialize the JSON).\n3. Compute HMAC-SHA256 with your workspace signing key.\n4. Compare against `s` using a timing-safe comparison\n   (e.g. `crypto.timingSafeEqual` in Node).\n5. Reject requests where `t` is older than 5 minutes to prevent replay.\n\n### Response and retries\n\nRespond with any `2xx` within 15 seconds. Non-2xx responses or timeouts\nare retried with exponential backoff and jitter, up to 8 attempts over\n~30 minutes. Process events asynchronously and acknowledge immediately.\n\n### Idempotency\n\n`eventId` is unique per delivery attempt and is intended for logging\nonly. Use `callData.callId` as your idempotency key — the same call\nmay be delivered more than once due to retries.\n"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 'Payload delivered to your webhook URL when a call is finalized.
+
+                '
+              required:
+              - event
+              - eventId
+              - occurredAt
+              - callData
+              properties:
+                event:
+                  type: string
+                  enum:
+                  - call.logged
+                  description: Event type. Always `call.logged` for this payload.
+                  example: call.logged
+                eventId:
+                  type: string
+                  description: 'Unique per delivery attempt. Use for logging only — not
+
+                    for deduplication. The same call may produce multiple
+
+                    `eventId`s if delivery is retried. Use `callData.callId`
+
+                    as your idempotency key.
+
+                    '
+                  example: evt_01HW9X4S5K2M8R0Q1Y3Z6T7V8B
+                occurredAt:
+                  type: string
+                  format: date-time
+                  description: ISO 8601 timestamp when the event was finalized in Nooks.
+                  example: '2026-05-22T18:14:07.103Z'
+                callData:
+                  type: object
+                  description: Complete call metadata for the finalized call.
+                  required:
+                  - callId
+                  - workspaceId
+                  - userData
+                  - prospectData
+                  - accountData
+                  - callDirection
+                  - status
+                  - disposition
+                  - startedAt
+                  - durationSeconds
+                  properties:
+                    callId:
+                      type: string
+                      description: 'Permanent Nooks call identifier. Use this as your
+
+                        idempotency key when processing webhook events.
+
+                        '
+                      example: c-7f3d2a1b-9c4e-4f8a-b1d2-5e6f7a8b9c0d
+                    workspaceId:
+                      type: string
+                      description: Workspace the call belongs to.
+                      example: ws-3b2c1a09-8d7e-6f5a-4b3c-2a1b0c9d8e7f
+                    userData:
+                      type: object
+                      description: The Nooks user who placed or received the call.
+                      required:
+                      - userId
+                      - email
+                      - name
+                      properties:
+                        userId:
+                          type: string
+                          nullable: true
+                          example: u-1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+                        email:
+                          type: string
+                          nullable: true
+                          example: rep@example.com
+                        name:
+                          type: string
+                          nullable: true
+                          example: Alex Rep
+                    prospectData:
+                      type: object
+                      description: The prospect on the other end of the call.
+                      required:
+                      - prospectId
+                      - name
+                      - phoneNumber
+                      properties:
+                        prospectId:
+                          type: string
+                          nullable: true
+                          example: p-9b8a7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d
+                        name:
+                          type: string
+                          nullable: true
+                          example: Jamie Buyer
+                        phoneNumber:
+                          type: string
+                          nullable: true
+                          description: E.164-formatted phone number when available.
+                          example: '+14155550199'
+                        email:
+                          type: string
+                          nullable: true
+                          example: jamie@prospectco.com
+                        linkedInUrl:
+                          type: string
+                          nullable: true
+                          example: https://www.linkedin.com/in/jamie-buyer
+                    accountData:
+                      type: object
+                      description: Account (company) associated with the prospect.
+                      required:
+                      - accountId
+                      - name
+                      properties:
+                        accountId:
+                          type: string
+                          nullable: true
+                          example: a-2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f
+                        name:
+                          type: string
+                          nullable: true
+                          example: Prospect Co
+                    callDirection:
+                      type: string
+                      enum:
+                      - inbound
+                      - outbound
+                      example: outbound
+                    status:
+                      type: string
+                      enum:
+                      - completed
+                      description: Final call status.
+                      example: completed
+                    disposition:
+                      type: object
+                      description: Call outcome / disposition.
+                      required:
+                      - id
+                      - name
+                      properties:
+                        id:
+                          type: string
+                          nullable: true
+                          example: d-connected-decision-maker
+                        name:
+                          type: string
+                          nullable: true
+                          example: Connected — Decision Maker
+                    startedAt:
+                      type: string
+                      format: date-time
+                      description: ISO 8601 timestamp when the call started.
+                      example: '2026-05-22T18:11:42.000Z'
+                    durationSeconds:
+                      type: number
+                      description: Call length in seconds.
+                      example: 142
+                    recordingUrl:
+                      type: string
+                      nullable: true
+                      description: Link to the recording, or `null` if unavailable.
+                      example: https://recordings.nooks.in/c-7f3d2a1b/audio.mp3
+                    notes:
+                      type: string
+                      nullable: true
+                      description: Rep-entered call notes, or `null` if none were captured.
+                      example: Decision-maker interested in Q3 pilot. Follow up Tuesday.
+                    transcriptUrl:
+                      type: string
+                      nullable: true
+                      description: Link to the transcript page in Nooks, or `null`.
+                      example: https://app.nooks.in/transcripts/c-7f3d2a1b
+                    sequenceData:
+                      type: object
+                      description: 'Sequence attribution. Always present on the payload;
+
+                        both inner fields are `null` when the call did not
+
+                        originate from a Nooks sequence task (manually-logged
+
+                        calls, dialer calls, and inbound calls).
+
+                        '
+                      required:
+                      - sequenceName
+                      - sequenceStep
+                      properties:
+                        sequenceName:
+                          type: string
+                          nullable: true
+                          description: 'Name of the sequence the call was placed from, or
+
+                            `null` if the call wasn''t sequence-attributed.
+
+                            '
+                          example: Q1 Outbound Campaign
+                        sequenceStep:
+                          type: string
+                          nullable: true
+                          description: 'Label of the sequence step the call was placed
+
+                            from, or `null` if the call wasn''t
+
+                            sequence-attributed.
+
+                            '
+                          example: Day 3 — Call
+      responses:
+        2XX:
+          description: 'Any `2xx` response acknowledges receipt. Respond within 15 seconds.
+
+            '
+      tags:
+      - Nooks Sequencing API
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: 'Bearer token sent in the `Authorization` header. Accepts either a
+
+        long-lived Nooks API key (`nooks-api-...`, from Developer Settings →
+
+        API Keys) or an OAuth 2.0 access token issued by
+
+        `https://oauth.nooks.in`. Use whichever you already have — the API
+
+        validates both formats on the same header. For full OAuth flow
+
+        details (authorize/token endpoints, scopes, refresh behavior) see
+
+        the Authentication section of this spec''s introduction.
+
+        '
+x-tagGroups:
+- name: API Reference
+  tags:
+  - Sequences
+  - SequenceSteps
+  - Emails
+  - Users
+  - SequenceStates
+  - Prospects
+  - Accounts
+  - Notes
+  - Mailboxes
+  - Calls
+  - CallDispositions
+  - Tasks
+  - EmailTemplates
+  - Introspection

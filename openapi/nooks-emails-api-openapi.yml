@@ -1,0 +1,517 @@
+openapi: 3.2.0
+info:
+  title: Nooks Sequencing Emails API
+  version: 0.1.0
+  description: "The Nooks Sequencing API provides programmatic access to manage sequences, tasks, templates, and prospect engagement workflows created using the Nooks SEP.\n\n## Authentication\n\nSend a bearer token in the `Authorization` header:\n```\nAuthorization: Bearer <token>\n```\n\nTwo token types are accepted on the same header — the API detects which\nformat you sent and validates accordingly. If you already have a token,\npaste it into the Authentication panel and skip the flow setup.\n\n### API keys\n\nLong-lived, workspace-scoped. Best for backend integrations and\nserver-to-server automation. Generate one from **Developer Settings →\nAPI Keys** in your Nooks workspace. API keys are prefixed `nooks-api-`\nand have full read/write access within the owning workspace.\n\n### OAuth 2.0 access tokens\n\nShort-lived (1 hour), user-scoped, scope-limited JWTs issued by\n`https://oauth.nooks.in` via the standard authorization-code + PKCE flow.\nBest for third-party apps acting on behalf of a specific user — the token\ncarries that user's identity and a subset of scopes the user consented\nto. Refresh tokens rotate every 90 days and are invalidated on first\nre-use (refresh-token reuse detection).\n\n**Endpoints:**\n\n- Authorize: `https://oauth.nooks.in/oauth/authorize`\n- Token: `https://oauth.nooks.in/oauth/token`\n- JWKS: `https://oauth.nooks.in/.well-known/jwks.json`\n- Server metadata (RFC 8414): `https://oauth.nooks.in/.well-known/oauth-authorization-server`\n\n**Available scopes:**\n\n| Scope | Grants |\n| --- | --- |\n| `prospects:read` | View your prospects |\n| `prospects:write` | Create and update prospects |\n| `sequences:read` | View your sequences |\n| `sequences:write` | Create and update sequences |\n| `sequence-steps:read` | View sequence steps |\n| `sequence-states:read` | View sequence enrollments |\n| `sequence-states:write` | Enroll prospects and manage enrollments |\n| `tasks:read` | View your tasks |\n| `tasks:write` | Create, update, complete, skip, and delete tasks |\n| `calls:read` | View your calls |\n| `calls:write` | Create and update calls |\n| `call-dispositions:read` | View call dispositions |\n| `emails:read` | View your emails |\n| `emails:write` | Create and update emails |\n| `mailboxes:read` | View connected mailboxes |\n| `users:read` | View users in your workspace |\n| `accounts:read` | View accounts (companies) in your workspace |\n| `notes:write` | Create notes on CRM-backed prospects and accounts |\n| `opportunities:read` | View opportunities (deals) in your workspace |\n| `search:read` | Search across your prospects, accounts, and other records |\n\n## Rate Limiting\nAPI requests are rate limited per workspace and per endpoint in a fixed\none-minute window. Separate endpoint buckets do not share quota, except\nroutes without an explicit limit use the shared default bucket.\n\nEvery response includes these headers:\n- `X-RateLimit-Limit` -- maximum requests allowed in the current per-minute window\n- `X-RateLimit-Remaining` -- requests remaining in the current window\n- `X-RateLimit-Reset` -- seconds until the current window resets\n\nWhen the limit is exceeded the API returns `429 Too Many Requests` with a\n`Retry-After` header indicating how many seconds to wait before retrying.\n\n**Current limits:**\n\n| Endpoint class | Methods | Limit |\n| --- | --- | --- |\n| List reads: `/sequences`, `/emails`, `/users`, `/sequenceStates`, `/prospects`, `/mailboxes`, `/calls`, `/sequenceSteps`, `/callDispositions`, `/tasks`, `/accounts` | `GET` | 300 requests/minute per endpoint |\n| Read by ID: `/sequences/{id}`, `/emails/{id}`, `/users/{id}`, `/sequenceStates/{id}`, `/prospects/{id}`, `/mailboxes/{id}`, `/calls/{id}`, `/sequenceSteps/{id}`, `/callDispositions/{id}`, `/tasks/{id}`, `/accounts/{id}`, `/emailTemplate/{id}` | `GET` | 600 requests/minute per endpoint |\n| Sequence writes: `/sequences`, `/sequences/{id}` | `POST`, `PATCH` | 120 requests/minute per endpoint |\n| Sequence state writes: `/sequenceStates`, `/sequenceStates/{id}`, `/sequenceStates/{id}/actions/finish` | `POST`, `DELETE` | 120 requests/minute per endpoint |\n| Task writes: `/tasks`, `/tasks/{id}`, `/tasks/{id}/complete`, `/tasks/{id}/skip` | `POST`, `PATCH`, `DELETE` | 120 requests/minute per endpoint |\n| CRM note writes: `/prospects/{id}/notes`, `/accounts/{id}/notes` | `POST` | 30 requests/minute per endpoint |\n| `/integrations/prospects/sync` | `POST` | 10 requests/minute |\n| Any other endpoint | Any | 30 requests/minute, shared default bucket |\n\n## Pagination\nList endpoints support cursor-based pagination using the `page[size]` and `page[after]`/`page[before]` query parameters.\n- Maximum page size: 100\n- Default page size: 50\n\n## Include (Inline Expansion)\nMost GET endpoints support an `include` query parameter that expands related `ReferenceObject` fields inline,\neliminating the need for follow-up API calls.\n\n**Format:** `?include=field1,field2` (comma-separated field names)\n\n**Without include:**\n```json\nGET /v1/prospects/123\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    { \"id\": \"ss-1\", \"_href\": \"/v1/sequenceStates/ss-1\" }\n  ]\n}\n```\n\n**With `include=sequenceStates`:**\n```json\nGET /v1/prospects/123?include=sequenceStates\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    {\n      \"id\": \"ss-1\",\n      \"_href\": \"/v1/sequenceStates/ss-1\",\n      \"state\": \"active\",\n      \"sequence\": { \"id\": \"seq-1\", \"_href\": \"/v1/sequences/seq-1\" },\n      \"prospect\": { \"id\": \"123\", \"_href\": \"/v1/prospects/123\" },\n      \"creator\": { \"id\": \"u-1\", \"_href\": \"/v1/users/u-1\" },\n      \"sequenceStep\": null,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"updatedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ]\n}\n```\n\nThe expanded object is a superset of `ReferenceObject` — it keeps `id` and `_href` and adds all DTO fields.\nThe response shape is unchanged; the field just contains richer data.\n\n**Hard constraints (enforced with 400 errors):**\n- **Max 3 includes per request.** Requesting more than 3 comma-separated values returns `400: \"include accepts at most 3 values\"`.\n- **GET endpoints only.** POST, PATCH, and DELETE endpoints do not accept `include`.\n- **No nested includes.** Only top-level field names are valid (e.g., `sequenceStates`). Dot-notation like `sequenceStates.prospect` returns 400.\n- **`account` on Prospect is not includable.** Requesting `include=account` returns 400.\n\nEach endpoint's `include` parameter lists the valid field names for that resource.\n"
+  contact:
+    name: Nooks API Support
+    email: support@nooks.in
+    url: https://www.nooks.in
+  license:
+    name: Proprietary
+  x-logo:
+    url: ./nooks-logo.svg
+    altText: Nooks Logo
+    href: https://www.nooks.ai
+servers:
+- url: https://partner-api.nooks.in/v1
+  description: Production API
+security:
+- BearerAuth: []
+tags:
+- name: Emails
+  description: Access email records
+paths:
+  /emails:
+    get:
+      operationId: listEmails
+      summary: List emails
+      description: "Returns a paginated list of emails. Supports filtering by ID, prospect, task, status, and updatedAt range.\n\nExample:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/emails?page[size]=50' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by prospect:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/emails?filter[prospect][id]=770e8400-e29b-41d4-a716-446655440003' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by task (the sequence task that triggered the email):\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/emails?filter[task][id]=990e8400-e29b-41d4-a716-446655440099' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by account (joins through the email's prospect):\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/emails?filter[account][id]=990e8400-e29b-41d4-a716-446655440099' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by delivery status:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/emails?filter[status]=sent,failed' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by updatedAt range:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/emails?filter[updatedAt][gte]=2025-01-01T00:00:00Z' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      tags:
+      - Emails
+      parameters:
+      - $ref: '#/components/parameters/PageSize'
+      - $ref: '#/components/parameters/PageAfter'
+      - $ref: '#/components/parameters/PageBefore'
+      - $ref: '#/components/parameters/FilterId'
+      - name: filter[prospect][id]
+        in: query
+        description: Filter emails for a specific prospect
+        required: false
+        schema:
+          type: string
+          format: uuid
+        example: 770e8400-e29b-41d4-a716-446655440003
+      - name: filter[task][id]
+        in: query
+        description: Filter emails by the sequence task they were sent for. Matches Email.sepTaskId (null for emails unrelated to a sequence task).
+        required: false
+        schema:
+          type: string
+          format: uuid
+        example: 990e8400-e29b-41d4-a716-446655440099
+      - name: filter[account][id]
+        in: query
+        description: 'Filter emails associated with a specific account. Joins through
+
+          the email''s prospect (`Prospect.accountId`); rows whose prospect
+
+          has no account, or rows with no prospect, are excluded.
+
+          '
+        required: false
+        schema:
+          type: string
+          format: uuid
+        example: 990e8400-e29b-41d4-a716-446655440099
+      - name: filter[status]
+        in: query
+        description: 'Filter emails by delivery status. Accepts a comma-separated list;
+
+          rows matching any of the provided statuses are returned. Note that
+
+          legacy rows may carry statuses outside this set (e.g. `delivered`,
+
+          `sent_from_gmail`) — filtering is case-sensitive and exact, so
+
+          those rows will not match `sent`.
+
+          '
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - draft
+            - in_progress
+            - sent
+            - failed
+        style: form
+        explode: false
+        example:
+        - sent
+        - failed
+      - $ref: '#/components/parameters/FilterUpdatedAtGte'
+      - $ref: '#/components/parameters/FilterUpdatedAtLt'
+      - name: include
+        in: query
+        description: 'Comma-separated relations to expand inline. Valid values: `prospect`, `sequence`, `sequenceStep`. Max 3.'
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - prospect
+            - sequence
+            - sequenceStep
+          maxItems: 3
+        style: form
+        explode: false
+        example:
+        - prospect
+        - sequence
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Email'
+                  links:
+                    $ref: '#/components/schemas/PaginationLinks'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /emails/{id}:
+    get:
+      operationId: getEmail
+      summary: Get email by ID
+      description: "Returns a single email by its unique identifier.\n\nExample:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/emails/550e8400-e29b-41d4-a716-446655440000' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      tags:
+      - Emails
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the email
+        schema:
+          type: string
+          format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
+      - name: include
+        in: query
+        description: 'Comma-separated relations to expand inline. Valid values: `prospect`, `sequence`, `sequenceStep`. Max 3.'
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - prospect
+            - sequence
+            - sequenceStep
+          maxItems: 3
+        style: form
+        explode: false
+        example:
+        - prospect
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Email'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  responses:
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid page[after] cursor
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+  parameters:
+    FilterUpdatedAtLt:
+      name: filter[updatedAt][lt]
+      in: query
+      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2026-01-01T00:00:00Z'
+    PageSize:
+      name: page[size]
+      in: query
+      description: Number of items per page (max 100)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      example: 50
+    FilterUpdatedAtGte:
+      name: filter[updatedAt][gte]
+      in: query
+      description: Filter by minimum updatedAt (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2025-01-01T00:00:00Z'
+    PageAfter:
+      name: page[after]
+      in: query
+      description: 'Cursor for fetching the next page. Opaque token returned by the
+
+        API in `links.next`; callers should treat it as opaque and only
+
+        pass values they received from a previous response. Malformed
+
+        cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    FilterId:
+      name: filter[id]
+      in: query
+      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
+      required: false
+      schema:
+        type: string
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
+      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
+    PageBefore:
+      name: page[before]
+      in: query
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+  schemas:
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
+    PaginationLinks:
+      type: object
+      description: 'Pagination links for navigating through results.
+
+        Links are returned as relative references (path + query) that
+
+        should be resolved against the base URL of the request.
+
+        '
+      properties:
+        first:
+          type: string
+          format: uri-reference
+          description: URL for the first page
+          example: /v1/sequences?page[size]=50
+        prev:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the previous page (null if on first page)
+          example: null
+        next:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the next page (null if on last page)
+          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    ReferenceObject:
+      type: object
+      description: A reference to a related resource
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
+    Email:
+      type: object
+      description: An email record
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the email
+        type:
+          type: string
+          nullable: true
+          description: Integration type of the email
+        status:
+          type: string
+          nullable: true
+          description: Current status of the email
+        from:
+          type: string
+          nullable: true
+          description: Sender email address
+        to:
+          type: string
+          nullable: true
+          description: Recipient email address
+        recipients:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: List of recipient email addresses
+        subject:
+          type: string
+          nullable: true
+          description: Email subject line
+        bodyText:
+          type: string
+          nullable: true
+          description: The plain-text body of the email.
+        bodyHtml:
+          type: string
+          nullable: true
+          description: The HTML body of the email.
+        prospect:
+          nullable: true
+          description: Associated prospect
+          allOf:
+          - $ref: '#/components/schemas/ReferenceObject'
+        sequence:
+          nullable: true
+          description: 'Sequence associated with this email when matched to a Nooks SEP task.
+
+            Null when the email is not matched to a Nooks SEP task.
+
+            '
+          allOf:
+          - $ref: '#/components/schemas/ReferenceObject'
+        sequenceStep:
+          nullable: true
+          description: 'Sequence step associated with this email when matched to a Nooks SEP task.
+
+            Null when the email is not matched to a Nooks SEP task.
+
+            '
+          allOf:
+          - $ref: '#/components/schemas/ReferenceObject'
+        date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date of the email
+        deliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the email was delivered
+        openedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the email was first opened
+        clickedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When a link in the email was first clicked
+        bouncedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the email bounced
+        repliedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When a reply was received
+        openCount:
+          type: integer
+          nullable: true
+          description: Number of times the email was opened
+        clickCount:
+          type: integer
+          nullable: true
+          description: Number of times links were clicked
+        createdAt:
+          type: string
+          format: date-time
+          description: When the email record was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the email record was last updated
+      required:
+      - id
+      - prospect
+      - sequence
+      - sequenceStep
+      - createdAt
+      - updatedAt
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: 'Bearer token sent in the `Authorization` header. Accepts either a
+
+        long-lived Nooks API key (`nooks-api-...`, from Developer Settings →
+
+        API Keys) or an OAuth 2.0 access token issued by
+
+        `https://oauth.nooks.in`. Use whichever you already have — the API
+
+        validates both formats on the same header. For full OAuth flow
+
+        details (authorize/token endpoints, scopes, refresh behavior) see
+
+        the Authentication section of this spec''s introduction.
+
+        '
+x-tagGroups:
+- name: API Reference
+  tags:
+  - Sequences
+  - SequenceSteps
+  - Emails
+  - Users
+  - SequenceStates
+  - Prospects
+  - Accounts
+  - Notes
+  - Mailboxes
+  - Calls
+  - CallDispositions
+  - Tasks
+  - EmailTemplates
+  - Introspection

@@ -1,0 +1,926 @@
+openapi: 3.2.0
+info:
+  title: Nooks Sequencing Sequences API
+  version: 0.1.0
+  description: "The Nooks Sequencing API provides programmatic access to manage sequences, tasks, templates, and prospect engagement workflows created using the Nooks SEP.\n\n## Authentication\n\nSend a bearer token in the `Authorization` header:\n```\nAuthorization: Bearer <token>\n```\n\nTwo token types are accepted on the same header — the API detects which\nformat you sent and validates accordingly. If you already have a token,\npaste it into the Authentication panel and skip the flow setup.\n\n### API keys\n\nLong-lived, workspace-scoped. Best for backend integrations and\nserver-to-server automation. Generate one from **Developer Settings →\nAPI Keys** in your Nooks workspace. API keys are prefixed `nooks-api-`\nand have full read/write access within the owning workspace.\n\n### OAuth 2.0 access tokens\n\nShort-lived (1 hour), user-scoped, scope-limited JWTs issued by\n`https://oauth.nooks.in` via the standard authorization-code + PKCE flow.\nBest for third-party apps acting on behalf of a specific user — the token\ncarries that user's identity and a subset of scopes the user consented\nto. Refresh tokens rotate every 90 days and are invalidated on first\nre-use (refresh-token reuse detection).\n\n**Endpoints:**\n\n- Authorize: `https://oauth.nooks.in/oauth/authorize`\n- Token: `https://oauth.nooks.in/oauth/token`\n- JWKS: `https://oauth.nooks.in/.well-known/jwks.json`\n- Server metadata (RFC 8414): `https://oauth.nooks.in/.well-known/oauth-authorization-server`\n\n**Available scopes:**\n\n| Scope | Grants |\n| --- | --- |\n| `prospects:read` | View your prospects |\n| `prospects:write` | Create and update prospects |\n| `sequences:read` | View your sequences |\n| `sequences:write` | Create and update sequences |\n| `sequence-steps:read` | View sequence steps |\n| `sequence-states:read` | View sequence enrollments |\n| `sequence-states:write` | Enroll prospects and manage enrollments |\n| `tasks:read` | View your tasks |\n| `tasks:write` | Create, update, complete, skip, and delete tasks |\n| `calls:read` | View your calls |\n| `calls:write` | Create and update calls |\n| `call-dispositions:read` | View call dispositions |\n| `emails:read` | View your emails |\n| `emails:write` | Create and update emails |\n| `mailboxes:read` | View connected mailboxes |\n| `users:read` | View users in your workspace |\n| `accounts:read` | View accounts (companies) in your workspace |\n| `notes:write` | Create notes on CRM-backed prospects and accounts |\n| `opportunities:read` | View opportunities (deals) in your workspace |\n| `search:read` | Search across your prospects, accounts, and other records |\n\n## Rate Limiting\nAPI requests are rate limited per workspace and per endpoint in a fixed\none-minute window. Separate endpoint buckets do not share quota, except\nroutes without an explicit limit use the shared default bucket.\n\nEvery response includes these headers:\n- `X-RateLimit-Limit` -- maximum requests allowed in the current per-minute window\n- `X-RateLimit-Remaining` -- requests remaining in the current window\n- `X-RateLimit-Reset` -- seconds until the current window resets\n\nWhen the limit is exceeded the API returns `429 Too Many Requests` with a\n`Retry-After` header indicating how many seconds to wait before retrying.\n\n**Current limits:**\n\n| Endpoint class | Methods | Limit |\n| --- | --- | --- |\n| List reads: `/sequences`, `/emails`, `/users`, `/sequenceStates`, `/prospects`, `/mailboxes`, `/calls`, `/sequenceSteps`, `/callDispositions`, `/tasks`, `/accounts` | `GET` | 300 requests/minute per endpoint |\n| Read by ID: `/sequences/{id}`, `/emails/{id}`, `/users/{id}`, `/sequenceStates/{id}`, `/prospects/{id}`, `/mailboxes/{id}`, `/calls/{id}`, `/sequenceSteps/{id}`, `/callDispositions/{id}`, `/tasks/{id}`, `/accounts/{id}`, `/emailTemplate/{id}` | `GET` | 600 requests/minute per endpoint |\n| Sequence writes: `/sequences`, `/sequences/{id}` | `POST`, `PATCH` | 120 requests/minute per endpoint |\n| Sequence state writes: `/sequenceStates`, `/sequenceStates/{id}`, `/sequenceStates/{id}/actions/finish` | `POST`, `DELETE` | 120 requests/minute per endpoint |\n| Task writes: `/tasks`, `/tasks/{id}`, `/tasks/{id}/complete`, `/tasks/{id}/skip` | `POST`, `PATCH`, `DELETE` | 120 requests/minute per endpoint |\n| CRM note writes: `/prospects/{id}/notes`, `/accounts/{id}/notes` | `POST` | 30 requests/minute per endpoint |\n| `/integrations/prospects/sync` | `POST` | 10 requests/minute |\n| Any other endpoint | Any | 30 requests/minute, shared default bucket |\n\n## Pagination\nList endpoints support cursor-based pagination using the `page[size]` and `page[after]`/`page[before]` query parameters.\n- Maximum page size: 100\n- Default page size: 50\n\n## Include (Inline Expansion)\nMost GET endpoints support an `include` query parameter that expands related `ReferenceObject` fields inline,\neliminating the need for follow-up API calls.\n\n**Format:** `?include=field1,field2` (comma-separated field names)\n\n**Without include:**\n```json\nGET /v1/prospects/123\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    { \"id\": \"ss-1\", \"_href\": \"/v1/sequenceStates/ss-1\" }\n  ]\n}\n```\n\n**With `include=sequenceStates`:**\n```json\nGET /v1/prospects/123?include=sequenceStates\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    {\n      \"id\": \"ss-1\",\n      \"_href\": \"/v1/sequenceStates/ss-1\",\n      \"state\": \"active\",\n      \"sequence\": { \"id\": \"seq-1\", \"_href\": \"/v1/sequences/seq-1\" },\n      \"prospect\": { \"id\": \"123\", \"_href\": \"/v1/prospects/123\" },\n      \"creator\": { \"id\": \"u-1\", \"_href\": \"/v1/users/u-1\" },\n      \"sequenceStep\": null,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"updatedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ]\n}\n```\n\nThe expanded object is a superset of `ReferenceObject` — it keeps `id` and `_href` and adds all DTO fields.\nThe response shape is unchanged; the field just contains richer data.\n\n**Hard constraints (enforced with 400 errors):**\n- **Max 3 includes per request.** Requesting more than 3 comma-separated values returns `400: \"include accepts at most 3 values\"`.\n- **GET endpoints only.** POST, PATCH, and DELETE endpoints do not accept `include`.\n- **No nested includes.** Only top-level field names are valid (e.g., `sequenceStates`). Dot-notation like `sequenceStates.prospect` returns 400.\n- **`account` on Prospect is not includable.** Requesting `include=account` returns 400.\n\nEach endpoint's `include` parameter lists the valid field names for that resource.\n"
+  contact:
+    name: Nooks API Support
+    email: support@nooks.in
+    url: https://www.nooks.in
+  license:
+    name: Proprietary
+  x-logo:
+    url: ./nooks-logo.svg
+    altText: Nooks Logo
+    href: https://www.nooks.ai
+servers:
+- url: https://partner-api.nooks.in/v1
+  description: Production API
+security:
+- BearerAuth: []
+tags:
+- name: Sequences
+  description: Manage sales sequences
+paths:
+  /sequences:
+    get:
+      operationId: listSequences
+      summary: List sequences
+      description: "Returns a paginated list of sequences.\n\nExample:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/sequences?filter[name]=Q1+Outbound+Campaign' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nWith include:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/sequences?include=owner,sequenceSteps' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      tags:
+      - Sequences
+      parameters:
+      - $ref: '#/components/parameters/PageSize'
+      - $ref: '#/components/parameters/PageAfter'
+      - $ref: '#/components/parameters/PageBefore'
+      - name: filter[name]
+        in: query
+        description: Filter sequences by exact name match
+        required: false
+        schema:
+          type: string
+        example: Q1 Outbound Campaign
+      - name: filter[type]
+        in: query
+        description: 'Filter by sequence type. Valid values: date, interval'
+        required: false
+        schema:
+          type: string
+          enum:
+          - date
+          - interval
+        example: interval
+      - name: include
+        in: query
+        description: Comma-separated relations to expand inline (`owner`, `sequenceSteps`) or computed fields to include (`analytics`). Max 3.
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - owner
+            - sequenceSteps
+            - analytics
+          maxItems: 3
+        style: form
+        explode: false
+        example:
+        - owner
+        - sequenceSteps
+      - $ref: '#/components/parameters/FilterUpdatedAtGte'
+      - $ref: '#/components/parameters/FilterUpdatedAtLt'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Sequence'
+                  links:
+                    $ref: '#/components/schemas/PaginationLinks'
+              example:
+                data:
+                - id: 550e8400-e29b-41d4-a716-446655440000
+                  name: Q1 Outbound Campaign
+                  type: interval
+                  enabled: true
+                  owner:
+                    id: 660e8400-e29b-41d4-a716-446655440001
+                    _href: /v1/users/660e8400-e29b-41d4-a716-446655440001
+                  sequenceSteps:
+                  - id: aa0e8400-e29b-41d4-a716-446655440030
+                    _href: /v1/sequenceSteps/aa0e8400-e29b-41d4-a716-446655440030
+                  - id: aa0e8400-e29b-41d4-a716-446655440031
+                    _href: /v1/sequenceSteps/aa0e8400-e29b-41d4-a716-446655440031
+                  privacy: team_editable
+                  createdAt: '2026-01-12T09:30:00Z'
+                  updatedAt: '2026-01-15T09:30:00Z'
+                - id: 660e8400-e29b-41d4-a716-446655440002
+                  name: Q2 Follow-up Sequence
+                  type: date
+                  enabled: false
+                  owner:
+                    id: 660e8400-e29b-41d4-a716-446655440001
+                    _href: /v1/users/660e8400-e29b-41d4-a716-446655440001
+                  sequenceSteps: []
+                  privacy: private
+                  createdAt: '2026-01-08T14:00:00Z'
+                  updatedAt: '2026-01-10T14:00:00Z'
+                links:
+                  first: https://partner-api.nooks.in/v1/sequences?page[size]=50
+                  prev: null
+                  next: https://partner-api.nooks.in/v1/sequences?page[size]=50&page[after]=eyJpZCI6IjY2MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMiIsInYiOjF9
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      operationId: createSequence
+      summary: Create a sequence
+      description: "Creates a new, empty sequence owned by the given user. Steps are\nadded and edited in the Nooks app — this endpoint creates the\nsequence container (name, type, owner, privacy).\n\nOAuth callers with the `user` role can only create sequences owned\nby themselves; `admin` and `manager` roles can create sequences for\nany user in the workspace. When that check fails (or `owner.id` is\nnot a workspace member), OAuth callers receive `403\nINSUFFICIENT_PERMISSION`; API-key callers receive `422` for an\nunknown owner. To enroll prospects into the new sequence, use\n`POST /v1/sequenceStates`.\n\nExample:\n```bash\ncurl -X POST 'https://partner-api.nooks.in/v1/sequences' \\\n  -H \"Authorization: Bearer nooks-api-...\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"data\": {\n      \"name\": \"Q3 Outbound Campaign\",\n      \"owner\": { \"id\": \"KKLvN5wQoghWFwUvC75CZ12QM7I3\" }\n    }\n  }'\n```\n"
+      tags:
+      - Sequences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Request body for creating a sequence
+              additionalProperties: false
+              properties:
+                data:
+                  type: object
+                  additionalProperties: false
+                  properties:
+                    name:
+                      type: string
+                      minLength: 1
+                      description: Name of the sequence
+                      example: Q3 Outbound Campaign
+                    type:
+                      type: string
+                      enum:
+                      - interval
+                      - date
+                      default: interval
+                      description: 'Scheduling model for the sequence. `interval` steps are
+
+                        spaced relative to the previous step; `date` steps run
+
+                        on fixed dates.
+
+                        '
+                      example: interval
+                    owner:
+                      type: object
+                      description: The user who will own the sequence
+                      additionalProperties: false
+                      properties:
+                        id:
+                          type: string
+                          minLength: 1
+                          maxLength: 128
+                          pattern: ^[A-Za-z0-9_-]{1,128}$
+                          description: ID of the owner user (Firebase UID)
+                          example: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                      required:
+                      - id
+                    enabled:
+                      type: boolean
+                      default: true
+                      description: Whether the sequence is active (`false` = archived)
+                      example: true
+                    privacy:
+                      type: string
+                      enum:
+                      - private
+                      - team_visible
+                      - team_editable
+                      default: team_editable
+                      description: Privacy level of the sequence
+                      example: team_editable
+                  required:
+                  - name
+                  - owner
+              required:
+              - data
+      responses:
+        '201':
+          description: Sequence created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sequence'
+              example:
+                id: 550e8400-e29b-41d4-a716-446655440000
+                name: Q3 Outbound Campaign
+                type: interval
+                enabled: true
+                owner:
+                  id: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                  _href: /v1/users/KKLvN5wQoghWFwUvC75CZ12QM7I3
+                sequenceSteps: []
+                privacy: team_editable
+                createdAt: '2026-01-12T09:30:00Z'
+                updatedAt: '2026-01-15T09:30:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'Forbidden — the OAuth token lacks the `sequences:write` scope
+
+            (`INSUFFICIENT_SCOPE`), or the caller''s role does not permit
+
+            acting on this sequence or owner (`INSUFFICIENT_PERMISSION`).
+
+            API-key callers are not subject to this check.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: INSUFFICIENT_PERMISSION
+                  message: You do not have permission to perform this action
+        '422':
+          description: 'Unprocessable entity — `owner.id` is not a user in this workspace
+
+            (use an id from `GET /v1/users`). Only returned to API-key
+
+            callers; OAuth callers instead receive `403
+
+            INSUFFICIENT_PERMISSION` for an unknown owner (see above).
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: UNPROCESSABLE_ENTITY
+                  message: Owner user KKLvN5wQoghWFwUvC75CZ12QM7I3 not found in this workspace. Use a user id from GET /v1/users.
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /sequences/{id}:
+    get:
+      operationId: getSequence
+      summary: Get sequence by ID
+      description: "Returns a single sequence by its unique identifier.\n\nExample:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/sequences/550e8400-e29b-41d4-a716-446655440000' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nWith include:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/sequences/550e8400-e29b-41d4-a716-446655440000?include=owner' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      tags:
+      - Sequences
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the sequence
+        schema:
+          type: string
+          format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
+      - name: include
+        in: query
+        description: Comma-separated relations to expand inline (`owner`, `sequenceSteps`) or computed fields to include (`analytics`). Max 3.
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - owner
+            - sequenceSteps
+            - analytics
+          maxItems: 3
+        style: form
+        explode: false
+        example:
+        - analytics
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sequence'
+              example:
+                id: 550e8400-e29b-41d4-a716-446655440000
+                name: Q1 Outbound Campaign
+                type: interval
+                enabled: true
+                owner:
+                  id: 660e8400-e29b-41d4-a716-446655440001
+                  _href: /v1/users/660e8400-e29b-41d4-a716-446655440001
+                sequenceSteps:
+                - id: aa0e8400-e29b-41d4-a716-446655440030
+                  _href: /v1/sequenceSteps/aa0e8400-e29b-41d4-a716-446655440030
+                - id: aa0e8400-e29b-41d4-a716-446655440031
+                  _href: /v1/sequenceSteps/aa0e8400-e29b-41d4-a716-446655440031
+                privacy: team_editable
+                analytics:
+                  email:
+                    delivered: 412
+                    opened: 198
+                    clicked: 41
+                    replied: 23
+                    bounced: 7
+                    unsubscribed: 2
+                  calls:
+                    dialed: 380
+                    connected: 71
+                    meetings: 5
+                  linkedIn: null
+                createdAt: '2026-01-12T09:30:00Z'
+                updatedAt: '2026-01-15T09:30:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      operationId: updateSequence
+      summary: Update a sequence
+      description: "Updates a sequence's name and/or `enabled` flag. Setting `enabled`\nto `false` archives the sequence; `true` reactivates it. At least\none field must be provided.\n\nOAuth callers with the `user` role can only update sequences they\nown (`403 INSUFFICIENT_PERMISSION` otherwise); `admin` and `manager`\nroles can update any sequence in the workspace.\n\nExample:\n```bash\ncurl -X PATCH 'https://partner-api.nooks.in/v1/sequences/550e8400-e29b-41d4-a716-446655440000' \\\n  -H \"Authorization: Bearer nooks-api-...\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{ \"data\": { \"name\": \"Q3 Outbound Campaign (paused)\", \"enabled\": false } }'\n```\n"
+      tags:
+      - Sequences
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the sequence
+        schema:
+          type: string
+          format: uuid
+        example: 550e8400-e29b-41d4-a716-446655440000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Request body for updating a sequence
+              additionalProperties: false
+              properties:
+                data:
+                  type: object
+                  minProperties: 1
+                  additionalProperties: false
+                  description: At least one of `name` or `enabled` is required.
+                  properties:
+                    name:
+                      type: string
+                      minLength: 1
+                      description: New name for the sequence
+                      example: Q3 Outbound Campaign (paused)
+                    enabled:
+                      type: boolean
+                      description: Whether the sequence is active (`false` = archived)
+                      example: false
+              required:
+              - data
+      responses:
+        '200':
+          description: Sequence updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sequence'
+              example:
+                id: 550e8400-e29b-41d4-a716-446655440000
+                name: Q3 Outbound Campaign (paused)
+                type: interval
+                enabled: false
+                owner:
+                  id: 660e8400-e29b-41d4-a716-446655440001
+                  _href: /v1/users/660e8400-e29b-41d4-a716-446655440001
+                sequenceSteps:
+                - id: aa0e8400-e29b-41d4-a716-446655440030
+                  _href: /v1/sequenceSteps/aa0e8400-e29b-41d4-a716-446655440030
+                privacy: team_editable
+                createdAt: '2026-01-12T09:30:00Z'
+                updatedAt: '2026-01-15T09:30:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 'Forbidden — the OAuth token lacks the `sequences:write` scope
+
+            (`INSUFFICIENT_SCOPE`), or the caller''s role does not permit
+
+            acting on this sequence or owner (`INSUFFICIENT_PERMISSION`).
+
+            API-key callers are not subject to this check.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: INSUFFICIENT_PERMISSION
+                  message: You do not have permission to perform this action
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  responses:
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    UnprocessableEntity:
+      description: 'Unprocessable entity - the request was well-formed but cannot be
+
+        processed. Typical causes: a referenced resource (prospect, sequence,
+
+        sequence step) does not exist or is in a state that prevents the
+
+        operation; a sequence-step task is missing required associations;
+
+        scheduling exceeds the 30-day limit.
+
+        '
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNPROCESSABLE_ENTITY
+              message: Unprocessable entity
+              details:
+                message: Referenced prospect does not exist
+    RateLimitExceeded:
+      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
+
+        rate limit (see headers in the rate-limiting section) or an
+
+        upstream CRM (Salesforce / HubSpot) rate limit hit while
+
+        servicing the request. Retry after the `Retry-After` interval.
+
+        '
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Rate limit exceeded
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid page[after] cursor
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
+  parameters:
+    FilterUpdatedAtLt:
+      name: filter[updatedAt][lt]
+      in: query
+      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2026-01-01T00:00:00Z'
+    PageSize:
+      name: page[size]
+      in: query
+      description: Number of items per page (max 100)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      example: 50
+    FilterUpdatedAtGte:
+      name: filter[updatedAt][gte]
+      in: query
+      description: Filter by minimum updatedAt (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2025-01-01T00:00:00Z'
+    PageAfter:
+      name: page[after]
+      in: query
+      description: 'Cursor for fetching the next page. Opaque token returned by the
+
+        API in `links.next`; callers should treat it as opaque and only
+
+        pass values they received from a previous response. Malformed
+
+        cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    PageBefore:
+      name: page[before]
+      in: query
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+  schemas:
+    LinkedInAnalytics:
+      type: object
+      description: 'Lifetime LinkedIn engagement counts for sequence-attributed activity.
+
+        Only activity tied to a sequence task is counted — LinkedIn connections
+
+        imported from the user''s existing network and manually logged activity
+
+        are excluded. Acceptances are discovered by periodic polling from the
+
+        Nooks Chrome extension, so `connectionRequestsAccepted` can lag reality.
+
+        '
+      properties:
+        connectionRequestsSent:
+          type: integer
+          description: Connection requests sent (pending or accepted; withdrawn/failed requests are not counted)
+          example: 96
+        connectionRequestsAccepted:
+          type: integer
+          description: Connection requests accepted
+          example: 31
+        messagesSent:
+          type: integer
+          description: LinkedIn messages sent
+          example: 64
+        repliesReceived:
+          type: integer
+          nullable: true
+          description: 'Inbound LinkedIn replies. Replies can only be attributed at the
+
+            sequence level (via the conversation''s first-reply sequence), so
+
+            this is a number on Sequence analytics and always `null` on
+
+            SequenceStep analytics.
+
+            '
+          example: 12
+      required:
+      - connectionRequestsSent
+      - connectionRequestsAccepted
+      - messagesSent
+      - repliesReceived
+    PaginationLinks:
+      type: object
+      description: 'Pagination links for navigating through results.
+
+        Links are returned as relative references (path + query) that
+
+        should be resolved against the base URL of the request.
+
+        '
+      properties:
+        first:
+          type: string
+          format: uri-reference
+          description: URL for the first page
+          example: /v1/sequences?page[size]=50
+        prev:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the previous page (null if on first page)
+          example: null
+        next:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the next page (null if on last page)
+          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    EmailAnalytics:
+      type: object
+      description: Lifetime email engagement counts.
+      properties:
+        delivered:
+          type: integer
+          description: Emails delivered
+          example: 412
+        opened:
+          type: integer
+          description: Emails opened (requires open tracking to be enabled for the workspace)
+          example: 198
+        clicked:
+          type: integer
+          description: Emails with a tracked link click (requires click tracking)
+          example: 41
+        replied:
+          type: integer
+          description: Email replies received
+          example: 23
+        bounced:
+          type: integer
+          description: Emails that bounced
+          example: 7
+        unsubscribed:
+          type: integer
+          description: Unsubscribes attributed to these emails
+          example: 2
+      required:
+      - delivered
+      - opened
+      - clicked
+      - replied
+      - bounced
+      - unsubscribed
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
+    Analytics:
+      type: object
+      description: 'Channel-grouped engagement counts, returned only when requested via
+
+        `include=analytics`. Counts are lifetime totals (not date-windowed)
+
+        and are raw counts, not rates — pick your own denominators.
+
+
+        All three keys are always present. A group is `null` if and only if
+
+        the channel is not applicable to the object: on a SequenceStep, only
+
+        the group matching the step''s `action` channel is populated; on a
+
+        Sequence, a group is populated when the sequence has at least one step
+
+        of that channel (summed over its steps). `null` always means "channel
+
+        not applicable here" — never "not computed". Zero means "applicable,
+
+        nothing happened yet". Steps whose channel has no tracked analytics
+
+        (`basic_task`, SMS) have all three groups `null`.
+
+        '
+      properties:
+        email:
+          nullable: true
+          description: Email engagement counts, or null if this object has no email channel
+          allOf:
+          - $ref: '#/components/schemas/EmailAnalytics'
+        calls:
+          nullable: true
+          description: Call outcome counts, or null if this object has no call channel
+          allOf:
+          - $ref: '#/components/schemas/CallAnalytics'
+        linkedIn:
+          nullable: true
+          description: LinkedIn engagement counts, or null if this object has no LinkedIn channel
+          allOf:
+          - $ref: '#/components/schemas/LinkedInAnalytics'
+      required:
+      - email
+      - calls
+      - linkedIn
+    CallAnalytics:
+      type: object
+      description: 'Lifetime call outcome counts. Within a single step, each enrolled
+
+        prospect is counted once, by the furthest outcome reached (not once
+
+        per dial). Counts nest numerically (meetings ≤ connected ≤ dialed).
+
+        '
+      properties:
+        dialed:
+          type: integer
+          description: Prospects dialed
+          example: 380
+        connected:
+          type: integer
+          description: Prospects where a call connected
+          example: 71
+        meetings:
+          type: integer
+          description: Prospects where a meeting was booked
+          example: 5
+      required:
+      - dialed
+      - connected
+      - meetings
+    Sequence:
+      type: object
+      description: A sales sequence defining a series of outreach steps
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the sequence
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          description: Name of the sequence
+          example: Q1 Outbound Campaign
+        type:
+          type: string
+          enum:
+          - date
+          - interval
+          description: 'Type of sequence timing:
+
+            - `date`: Steps are scheduled for specific dates
+
+            - `interval`: Steps are scheduled based on intervals from enrollment
+
+            '
+          example: interval
+        enabled:
+          type: boolean
+          description: Whether the sequence is currently active
+          example: true
+        owner:
+          description: The user who owns this sequence
+          $ref: '#/components/schemas/ReferenceObject'
+        sequenceSteps:
+          type: array
+          description: Steps in this sequence
+          items:
+            $ref: '#/components/schemas/ReferenceObject'
+        privacy:
+          type: string
+          enum:
+          - private
+          - team_visible
+          - team_editable
+          description: 'Privacy level of the sequence:
+
+            - `private`: Only the owner (and workspace managers/admins) can view or edit it in Nooks.
+
+            - `team_visible`: All team members can view and enroll prospects; only the owner can edit.
+
+            - `team_editable`: All team members can view, enroll prospects, and edit (the default).
+
+
+            Always present. Integrations acting on behalf of a user should
+
+            respect this — treat `private` sequences as owner-only.
+
+            '
+          example: team_editable
+        analytics:
+          description: 'Lifetime engagement counts summed over this sequence''s steps,
+
+            grouped by channel. **Only present when the request includes
+
+            `include=analytics`.** A group is `null` iff the sequence has no
+
+            step of that channel. `linkedIn.repliesReceived` is populated at
+
+            this level (LinkedIn replies cannot be attributed to individual
+
+            steps).
+
+            '
+          $ref: '#/components/schemas/Analytics'
+        createdAt:
+          type: string
+          format: date-time
+          description: When the sequence was created
+          example: '2026-01-12T09:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: 'Effective last-updated time of the sequence: the most recent of the
+
+            sequence''s own update time and the update time of any of its steps.
+
+            `filter[updatedAt]` applies to this same derived value.
+
+            '
+          example: '2026-01-15T09:30:00Z'
+      required:
+      - id
+      - name
+      - type
+      - enabled
+      - owner
+      - sequenceSteps
+      - privacy
+      - createdAt
+      - updatedAt
+    ReferenceObject:
+      type: object
+      description: A reference to a related resource
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: 'Bearer token sent in the `Authorization` header. Accepts either a
+
+        long-lived Nooks API key (`nooks-api-...`, from Developer Settings →
+
+        API Keys) or an OAuth 2.0 access token issued by
+
+        `https://oauth.nooks.in`. Use whichever you already have — the API
+
+        validates both formats on the same header. For full OAuth flow
+
+        details (authorize/token endpoints, scopes, refresh behavior) see
+
+        the Authentication section of this spec''s introduction.
+
+        '
+x-tagGroups:
+- name: API Reference
+  tags:
+  - Sequences
+  - SequenceSteps
+  - Emails
+  - Users
+  - SequenceStates
+  - Prospects
+  - Accounts
+  - Notes
+  - Mailboxes
+  - Calls
+  - CallDispositions
+  - Tasks
+  - EmailTemplates
+  - Introspection
