@@ -100,6 +100,8 @@ apis:
   humanURL: https://developer.nooks.in/
   baseURL: https://partner-api.nooks.in/v1
   tags:
+  - Account
+  tags_raw:
   - Accounts
   properties:
   - type: OpenAPI
@@ -130,6 +132,8 @@ apis:
   humanURL: https://developer.nooks.in/
   baseURL: https://partner-api.nooks.in/v1
   tags:
+  - Call Dispositions
+  tags_raw:
   - CallDispositions
   properties:
   - type: OpenAPI
@@ -220,6 +224,8 @@ apis:
   humanURL: https://developer.nooks.in/
   baseURL: https://partner-api.nooks.in/v1
   tags:
+  - Email Templates
+  tags_raw:
   - EmailTemplates
   properties:
   - type: OpenAPI
@@ -430,6 +436,8 @@ apis:
   humanURL: https://developer.nooks.in/
   baseURL: https://partner-api.nooks.in/v1
   tags:
+  - Sequence States
+  tags_raw:
   - SequenceStates
   properties:
   - type: OpenAPI
@@ -490,6 +498,8 @@ apis:
   humanURL: https://developer.nooks.in/
   baseURL: https://partner-api.nooks.in/v1
   tags:
+  - Task
+  tags_raw:
   - Tasks
   properties:
   - type: OpenAPI
@@ -520,6 +530,8 @@ apis:
   humanURL: https://developer.nooks.in/
   baseURL: https://partner-api.nooks.in/v1
   tags:
+  - User
+  tags_raw:
   - Users
   properties:
   - type: OpenAPI
