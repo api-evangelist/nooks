@@ -1,20 +1,18 @@
 aid: nooks
 name: Nooks
-description: >-
-  Nooks is an AI-native revenue/sales engagement platform positioned as "The Agent Workspace for
-  Intelligent Outbound," where sales representatives and AI agents collaborate on prospecting,
-  sequencing, dialing, and coaching inside a single workspace. Its products include an AI Parallel
-  Dialer, AI Sequencing, AI Coaching, Signals Intelligence, and a Virtual Salesfloor, aimed at
-  helping revenue and SDR teams build more pipeline with less manual work. Nooks publishes a public
-  Nooks Sequencing API (the "Nooks External API") documented with a Scalar-rendered OpenAPI 3.1.0
-  contract at developer.nooks.in, served from partner-api.nooks.in/v1, covering sequences, sequence
-  steps, sequence states, prospects, accounts, notes, tasks, calls, call dispositions, emails,
-  email templates, mailboxes, and users. Authentication accepts either a workspace-scoped
-  `nooks-api-` API key or an OAuth 2.0 authorization-code + PKCE access token from oauth.nooks.in,
-  with 24 published scopes, RFC 8414 authorization-server metadata, and a JWKS endpoint. Nooks also
-  operates an OAuth-protected remote MCP server at mcp.nooks.in, a signed `call.logged` webhook, an
-  Atlassian Statuspage at status.nooks.in, and a SafeBase trust center with SOC 2 Type 2, SOC 3,
-  ISO/IEC 27001:2022, GDPR, CCPA, and EU-US DPF coverage plus a Bugcrowd responsible-disclosure
+description: Nooks is an AI-native revenue/sales engagement platform positioned as "The Agent Workspace
+  for Intelligent Outbound," where sales representatives and AI agents collaborate on prospecting, sequencing,
+  dialing, and coaching inside a single workspace. Its products include an AI Parallel Dialer, AI Sequencing,
+  AI Coaching, Signals Intelligence, and a Virtual Salesfloor, aimed at helping revenue and SDR teams
+  build more pipeline with less manual work. Nooks publishes a public Nooks Sequencing API (the "Nooks
+  External API") documented with a Scalar-rendered OpenAPI 3.1.0 contract at developer.nooks.in, served
+  from partner-api.nooks.in/v1, covering sequences, sequence steps, sequence states, prospects, accounts,
+  notes, tasks, calls, call dispositions, emails, email templates, mailboxes, and users. Authentication
+  accepts either a workspace-scoped `nooks-api-` API key or an OAuth 2.0 authorization-code + PKCE access
+  token from oauth.nooks.in, with 24 published scopes, RFC 8414 authorization-server metadata, and a JWKS
+  endpoint. Nooks also operates an OAuth-protected remote MCP server at mcp.nooks.in, a signed `call.logged`
+  webhook, an Atlassian Statuspage at status.nooks.in, and a SafeBase trust center with SOC 2 Type 2,
+  SOC 3, ISO/IEC 27001:2022, GDPR, CCPA, and EU-US DPF coverage plus a Bugcrowd responsible-disclosure
   program. Nooks is backed by Kleiner Perkins and runs its application at app.nooks.in.
 url: https://raw.githubusercontent.com/api-evangelist/nooks/refs/heads/main/apis.yml
 x-type: company
@@ -75,13 +73,12 @@ tags_raw:
 - Agents
 - MCP
 apis:
-- aid: nooks-mcp-server
+- aid: nooks:nooks-mcp-server
   name: Nooks MCP Server
-  description: >-
-    Nooks operates a hosted, remote Model Context Protocol server at https://mcp.nooks.in/. It is OAuth-protected
-    — an anonymous `tools/list` returns HTTP 401 `invalid_token` — and publishes RFC 9728 protected-resource
-    metadata naming https://oauth.nooks.in as its authorization server and the same 24 scopes as the REST
-    API.
+  description: Nooks operates a hosted, remote Model Context Protocol server at https://mcp.nooks.in/.
+    It is OAuth-protected — an anonymous `tools/list` returns HTTP 401 `invalid_token` — and publishes
+    RFC 9728 protected-resource metadata naming https://oauth.nooks.in as its authorization server and
+    the same 24 scopes as the REST API.
   humanURL: https://developer.nooks.in/
   baseURL: https://mcp.nooks.in/
   tags:
