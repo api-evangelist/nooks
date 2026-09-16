@@ -44,7 +44,7 @@ accessModel:
   method: searched
 specificationVersion: '0.23'
 created: '2026-07-17'
-modified: '2026-08-14'
+modified: '2026-09-16'
 image: https://cdn.prod.website-files.com/697107c16c913fd77cf0aacd/69b2e1b1625a9e823d1edf5f_6995c9952aa828323555083c_OG%20Image%20(1).png
 tags:
 - Company
@@ -308,7 +308,7 @@ apis:
   - type: Lifecycle
     url: lifecycle/nooks-lifecycle.yml
 - aid: nooks:nooks-nooks-sequencing-api-api
-  name: Nooks Nooks Sequencing API
+  name: Nooks Sequencing API
   description: The Nooks Sequencing API API from Nooks — 0 operation(s) for nooks sequencing api.
   humanURL: https://developer.nooks.in/
   baseURL: https://partner-api.nooks.in/v1
