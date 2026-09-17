@@ -75,10 +75,11 @@ tags_raw:
 apis:
 - aid: nooks:nooks-mcp-server
   name: Nooks MCP Server
-  description: Nooks operates a hosted, remote Model Context Protocol server at https://mcp.nooks.in/.
-    It is OAuth-protected — an anonymous `tools/list` returns HTTP 401 `invalid_token` — and publishes
-    RFC 9728 protected-resource metadata naming https://oauth.nooks.in as its authorization server and
-    the same 24 scopes as the REST API.
+  description: >-
+    Nooks operates a hosted, remote Model Context Protocol server at https://mcp.nooks.in/. It is OAuth-protected
+    — an anonymous `tools/list` returns HTTP 401 `invalid_token` — and publishes RFC 9728 protected-resource
+    metadata naming https://oauth.nooks.in as its authorization server and the same 24 scopes as the REST
+    API.
   humanURL: https://developer.nooks.in/
   baseURL: https://mcp.nooks.in/
   tags:
@@ -103,38 +104,6 @@ apis:
   properties:
   - type: OpenAPI
     url: openapi/nooks-accounts-api-openapi.yml
-  - type: APIReference
-    url: https://developer.nooks.in/
-  - type: Authentication
-    url: authentication/nooks-authentication.yml
-  - type: OAuthScopes
-    url: scopes/nooks-scopes.yml
-  - type: RateLimits
-    url: rate-limits/nooks-rate-limits.yml
-  - type: ErrorCatalog
-    url: errors/nooks-problem-types.yml
-  - type: Conventions
-    url: conventions/nooks-conventions.yml
-  - type: DataModel
-    url: data-model/nooks-data-model.yml
-  - type: Webhooks
-    url: asyncapi/nooks-webhooks.yml
-  - type: Conformance
-    url: conformance/nooks-conformance.yml
-  - type: Lifecycle
-    url: lifecycle/nooks-lifecycle.yml
-- aid: nooks:nooks-calldispositions-api
-  name: Nooks Call Dispositions API
-  description: Access call disposition definitions
-  humanURL: https://developer.nooks.in/
-  baseURL: https://partner-api.nooks.in/v1
-  tags:
-  - Call Dispositions
-  tags_raw:
-  - CallDispositions
-  properties:
-  - type: OpenAPI
-    url: openapi/nooks-calldispositions-api-openapi.yml
   - type: APIReference
     url: https://developer.nooks.in/
   - type: Authentication
@@ -195,38 +164,6 @@ apis:
   properties:
   - type: OpenAPI
     url: openapi/nooks-emails-api-openapi.yml
-  - type: APIReference
-    url: https://developer.nooks.in/
-  - type: Authentication
-    url: authentication/nooks-authentication.yml
-  - type: OAuthScopes
-    url: scopes/nooks-scopes.yml
-  - type: RateLimits
-    url: rate-limits/nooks-rate-limits.yml
-  - type: ErrorCatalog
-    url: errors/nooks-problem-types.yml
-  - type: Conventions
-    url: conventions/nooks-conventions.yml
-  - type: DataModel
-    url: data-model/nooks-data-model.yml
-  - type: Webhooks
-    url: asyncapi/nooks-webhooks.yml
-  - type: Conformance
-    url: conformance/nooks-conformance.yml
-  - type: Lifecycle
-    url: lifecycle/nooks-lifecycle.yml
-- aid: nooks:nooks-emailtemplates-api
-  name: Nooks Email Templates API
-  description: Access email template content
-  humanURL: https://developer.nooks.in/
-  baseURL: https://partner-api.nooks.in/v1
-  tags:
-  - Email Templates
-  tags_raw:
-  - EmailTemplates
-  properties:
-  - type: OpenAPI
-    url: openapi/nooks-emailtemplates-api-openapi.yml
   - type: APIReference
     url: https://developer.nooks.in/
   - type: Authentication
@@ -427,38 +364,6 @@ apis:
     url: conformance/nooks-conformance.yml
   - type: Lifecycle
     url: lifecycle/nooks-lifecycle.yml
-- aid: nooks:nooks-sequencestates-api
-  name: Nooks Sequence States API
-  description: Track prospect enrollments in sequences
-  humanURL: https://developer.nooks.in/
-  baseURL: https://partner-api.nooks.in/v1
-  tags:
-  - Sequence States
-  tags_raw:
-  - SequenceStates
-  properties:
-  - type: OpenAPI
-    url: openapi/nooks-sequencestates-api-openapi.yml
-  - type: APIReference
-    url: https://developer.nooks.in/
-  - type: Authentication
-    url: authentication/nooks-authentication.yml
-  - type: OAuthScopes
-    url: scopes/nooks-scopes.yml
-  - type: RateLimits
-    url: rate-limits/nooks-rate-limits.yml
-  - type: ErrorCatalog
-    url: errors/nooks-problem-types.yml
-  - type: Conventions
-    url: conventions/nooks-conventions.yml
-  - type: DataModel
-    url: data-model/nooks-data-model.yml
-  - type: Webhooks
-    url: asyncapi/nooks-webhooks.yml
-  - type: Conformance
-    url: conformance/nooks-conformance.yml
-  - type: Lifecycle
-    url: lifecycle/nooks-lifecycle.yml
 - aid: nooks:nooks-sequencesteps-api
   name: Nooks Sequence Steps API
   description: Access sequence step definitions
@@ -533,6 +438,96 @@ apis:
   properties:
   - type: OpenAPI
     url: openapi/nooks-users-api-openapi.yml
+  - type: APIReference
+    url: https://developer.nooks.in/
+  - type: Authentication
+    url: authentication/nooks-authentication.yml
+  - type: OAuthScopes
+    url: scopes/nooks-scopes.yml
+  - type: RateLimits
+    url: rate-limits/nooks-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/nooks-problem-types.yml
+  - type: Conventions
+    url: conventions/nooks-conventions.yml
+  - type: DataModel
+    url: data-model/nooks-data-model.yml
+  - type: Webhooks
+    url: asyncapi/nooks-webhooks.yml
+  - type: Conformance
+    url: conformance/nooks-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/nooks-lifecycle.yml
+- aid: nooks:nooks-call-dispositions-api
+  name: Nooks Call Dispositions API
+  description: Access call disposition definitions
+  humanURL: https://developer.nooks.in/
+  baseURL: https://mcp.nooks.in/
+  tags:
+  - Call Dispositions
+  properties:
+  - type: OpenAPI
+    url: openapi/nooks-call-dispositions-api-openapi.yml
+  - type: APIReference
+    url: https://developer.nooks.in/
+  - type: Authentication
+    url: authentication/nooks-authentication.yml
+  - type: OAuthScopes
+    url: scopes/nooks-scopes.yml
+  - type: RateLimits
+    url: rate-limits/nooks-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/nooks-problem-types.yml
+  - type: Conventions
+    url: conventions/nooks-conventions.yml
+  - type: DataModel
+    url: data-model/nooks-data-model.yml
+  - type: Webhooks
+    url: asyncapi/nooks-webhooks.yml
+  - type: Conformance
+    url: conformance/nooks-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/nooks-lifecycle.yml
+- aid: nooks:nooks-email-templates-api
+  name: Nooks Email Templates API
+  description: Access email template content
+  humanURL: https://developer.nooks.in/
+  baseURL: https://mcp.nooks.in/
+  tags:
+  - Email Templates
+  properties:
+  - type: OpenAPI
+    url: openapi/nooks-email-templates-api-openapi.yml
+  - type: APIReference
+    url: https://developer.nooks.in/
+  - type: Authentication
+    url: authentication/nooks-authentication.yml
+  - type: OAuthScopes
+    url: scopes/nooks-scopes.yml
+  - type: RateLimits
+    url: rate-limits/nooks-rate-limits.yml
+  - type: ErrorCatalog
+    url: errors/nooks-problem-types.yml
+  - type: Conventions
+    url: conventions/nooks-conventions.yml
+  - type: DataModel
+    url: data-model/nooks-data-model.yml
+  - type: Webhooks
+    url: asyncapi/nooks-webhooks.yml
+  - type: Conformance
+    url: conformance/nooks-conformance.yml
+  - type: Lifecycle
+    url: lifecycle/nooks-lifecycle.yml
+- aid: nooks:nooks-sequence-states-api
+  name: Nooks Sequence States API
+  description: Track prospect enrollments in sequences
+  humanURL: https://developer.nooks.in/
+  baseURL: https://mcp.nooks.in/
+  tags:
+  - Sequence States
+  properties:
+  - type: OpenAPI
+    url: openapi/nooks-sequence-states-api-openapi.yml
   - type: APIReference
     url: https://developer.nooks.in/
   - type: Authentication
