@@ -160,6 +160,8 @@ apis:
   humanURL: https://developer.nooks.in/
   baseURL: https://partner-api.nooks.in/v1
   tags:
+  - Email
+  tags_raw:
   - Emails
   properties:
   - type: OpenAPI
