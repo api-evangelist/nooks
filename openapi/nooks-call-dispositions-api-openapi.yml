@@ -1,6 +1,6 @@
 openapi: 3.2.0
 info:
-  title: Nooks Sequencing Accounts API
+  title: Nooks Sequencing Call Dispositions API
   version: 0.1.0
   description: The Nooks Sequencing API provides programmatic access to manage sequences, tasks, templates, and prospect engagement workflows created using the Nooks SEP.
   contact:
@@ -19,79 +19,61 @@ servers:
 security:
 - BearerAuth: []
 tags:
-- name: Accounts
-  description: Access account (company) records
+- name: Call Dispositions
+  description: Access call disposition definitions
 paths:
-  /accounts:
+  /callDispositions:
     get:
-      operationId: listAccounts
-      summary: List accounts
-      description: 'Returns a paginated list of accounts (companies) in the workspace.
-
-        Supports filtering by indexed account columns.
+      operationId: listCallDispositions
+      summary: List call dispositions
+      description: 'Returns a paginated list of call dispositions for the workspace. Only dispositions with type `nooks_sep` are returned.
 
 
         Example:
 
         ```bash
 
-        curl -X GET ''https://partner-api.nooks.in/v1/accounts?page[size]=50'' \
+        curl -X GET ''https://partner-api.nooks.in/v1/callDispositions?page[size]=50'' \
 
         -H "Authorization: Bearer nooks-api-..."
 
         ```
 
 
-        Filter by domain:
+        Filter by name:
 
         ```bash
 
-        curl -X GET ''https://partner-api.nooks.in/v1/accounts?filter[domain]=acme.com'' \
+        curl -X GET ''https://partner-api.nooks.in/v1/callDispositions?filter[name]=Connected'' \
 
         -H "Authorization: Bearer nooks-api-..."
 
         ```
 
 
-        Note: results are restricted to accounts sourced from a customer
+        Filter by IDs:
 
-        CRM (`salesforce`, `hubspot`).'
+        ```bash
+
+        curl -X GET ''https://partner-api.nooks.in/v1/callDispositions?filter[id]=UUID1,UUID2'' \
+
+        -H "Authorization: Bearer nooks-api-..."
+
+        ```'
       tags:
-      - Accounts
+      - Call Dispositions
       parameters:
       - $ref: '#/components/parameters/PageSize'
       - $ref: '#/components/parameters/PageAfter'
       - $ref: '#/components/parameters/PageBefore'
-      - name: filter[id]
-        in: query
-        description: Comma-separated list of account UUIDs to fetch
-        required: false
-        schema:
-          type: string
-        example: aa0e8400-e29b-41d4-a716-446655440030,bb0e8400-e29b-41d4-a716-446655440031
+      - $ref: '#/components/parameters/FilterId'
       - name: filter[name]
         in: query
-        description: Filter accounts by exact name match
+        description: Filter dispositions by exact name match
         required: false
         schema:
           type: string
-        example: Acme Corp
-      - name: filter[domain]
-        in: query
-        description: Filter accounts by exact domain match
-        required: false
-        schema:
-          type: string
-        example: acme.com
-      - name: filter[crmId]
-        in: query
-        description: Filter accounts by CRM external ID
-        required: false
-        schema:
-          type: string
-        example: 0014x00000ABCDEF
-      - $ref: '#/components/parameters/FilterUpdatedAtGte'
-      - $ref: '#/components/parameters/FilterUpdatedAtLt'
+        example: Connected
       responses:
         '200':
           description: Successful response
@@ -103,104 +85,84 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Account'
+                      $ref: '#/components/schemas/CallDisposition'
                   links:
                     $ref: '#/components/schemas/PaginationLinks'
               example:
                 data:
-                - id: aa0e8400-e29b-41d4-a716-446655440030
-                  name: Acme Corp
-                  domain: acme.com
-                  numEmployees: 500
-                  linkedInUrl: https://linkedin.com/company/acme
-                  description: B2B SaaS for the manufacturing sector.
-                  createdAt: '2025-09-01T10:00:00.000Z'
-                  updatedAt: '2025-11-15T14:30:00.000Z'
+                - id: dd0e8400-e29b-41d4-a716-446655440070
+                  name: Connected
+                  callOutcome: connected
+                  order: 1
+                  createdAt: '2025-10-01T10:00:00.000Z'
+                  updatedAt: '2025-10-01T10:00:00.000Z'
+                - id: dd0e8400-e29b-41d4-a716-446655440071
+                  name: Left Voicemail
+                  callOutcome: voicemail
+                  order: 2
+                  createdAt: '2025-10-01T10:00:00.000Z'
+                  updatedAt: '2025-10-01T10:00:00.000Z'
                 links:
-                  first: https://partner-api.nooks.in/v1/accounts?page[size]=50
+                  first: https://partner-api.nooks.in/v1/callDispositions?page[size]=50
                   prev: null
-                  next: https://partner-api.nooks.in/v1/accounts?page[size]=50&page[after]=eyJpZCI6ImFhMGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAzMCIsInYiOjF9
+                  next: null
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '429':
-          $ref: '#/components/responses/RateLimitExceeded'
         '500':
           $ref: '#/components/responses/InternalError'
-  /accounts/{id}:
+  /callDispositions/{id}:
     get:
-      operationId: getAccount
-      summary: Get account by ID
-      description: 'Returns a single account by its unique identifier.
+      operationId: getCallDisposition
+      summary: Get call disposition by ID
+      description: 'Returns a single call disposition by its unique identifier. Only dispositions with type `nooks_sep` are accessible.
 
 
         Example:
 
         ```bash
 
-        curl -X GET ''https://partner-api.nooks.in/v1/accounts/aa0e8400-e29b-41d4-a716-446655440030'' \
+        curl -X GET ''https://partner-api.nooks.in/v1/callDispositions/dd0e8400-e29b-41d4-a716-446655440070'' \
 
         -H "Authorization: Bearer nooks-api-..."
 
         ```'
       tags:
-      - Accounts
+      - Call Dispositions
       parameters:
       - name: id
         in: path
         required: true
-        description: Unique identifier for the account
+        description: Unique identifier for the call disposition
         schema:
           type: string
           format: uuid
-        example: aa0e8400-e29b-41d4-a716-446655440030
+        example: dd0e8400-e29b-41d4-a716-446655440070
       responses:
         '200':
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Account'
+                $ref: '#/components/schemas/CallDisposition'
               example:
-                id: aa0e8400-e29b-41d4-a716-446655440030
-                name: Acme Corp
-                domain: acme.com
-                numEmployees: 500
-                linkedInUrl: https://linkedin.com/company/acme
-                description: B2B SaaS for the manufacturing sector.
-                createdAt: '2025-09-01T10:00:00.000Z'
-                updatedAt: '2025-11-15T14:30:00.000Z'
+                id: dd0e8400-e29b-41d4-a716-446655440070
+                name: Connected
+                callOutcome: connected
+                order: 1
+                createdAt: '2025-10-01T10:00:00.000Z'
+                updatedAt: '2025-10-01T10:00:00.000Z'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-        '429':
-          $ref: '#/components/responses/RateLimitExceeded'
         '500':
           $ref: '#/components/responses/InternalError'
 components:
   responses:
-    RateLimitExceeded:
-      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
-
-        rate limit (see headers in the rate-limiting section) or an
-
-        upstream CRM (Salesforce / HubSpot) rate limit hit while
-
-        servicing the request. Retry after the `Retry-After` interval.
-
-        '
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: RATE_LIMIT_EXCEEDED
-              message: Rate limit exceeded
     Unauthorized:
       description: Unauthorized - invalid or missing API key
       content:
@@ -253,15 +215,15 @@ components:
         maximum: 100
         default: 50
       example: 50
-    FilterUpdatedAtLt:
-      name: filter[updatedAt][lt]
+    FilterId:
+      name: filter[id]
       in: query
-      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
+      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
       required: false
       schema:
         type: string
-        format: date-time
-      example: '2026-01-01T00:00:00Z'
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
+      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
     PageAfter:
       name: page[after]
       in: query
@@ -278,15 +240,6 @@ components:
       schema:
         type: string
       example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    FilterUpdatedAtGte:
-      name: filter[updatedAt][gte]
-      in: query
-      description: Filter by minimum updatedAt (ISO 8601 datetime)
-      required: false
-      schema:
-        type: string
-        format: date-time
-      example: '2025-01-01T00:00:00Z'
     PageBefore:
       name: page[before]
       in: query
@@ -331,6 +284,45 @@ components:
           nullable: true
           description: URL for the next page (null if on last page)
           example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    CallDisposition:
+      type: object
+      description: A call disposition definition used to categorize call outcomes
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the call disposition
+          example: dd0e8400-e29b-41d4-a716-446655440070
+        name:
+          type: string
+          description: Display name of the disposition
+          example: Connected
+        callOutcome:
+          type: string
+          description: The call outcome category this disposition maps to
+          example: connected
+        order:
+          type: integer
+          nullable: true
+          description: Sort order for display (null if unordered)
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          description: When the disposition was created
+          example: '2025-10-01T10:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the disposition was last updated
+          example: '2025-10-01T10:00:00.000Z'
+      required:
+      - id
+      - name
+      - callOutcome
+      - order
+      - createdAt
+      - updatedAt
     Error:
       type: object
       description: Standard error response
@@ -356,60 +348,6 @@ components:
 
             '
           example: abc123def456
-    Account:
-      type: object
-      description: An account (company) record
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique identifier for the account
-          example: aa0e8400-e29b-41d4-a716-446655440030
-        name:
-          type: string
-          nullable: true
-          description: Name of the account (company)
-          example: Acme Corp
-        domain:
-          type: string
-          nullable: true
-          description: Primary domain associated with the account
-          example: acme.com
-        numEmployees:
-          type: integer
-          nullable: true
-          description: Number of employees at the account
-          example: 500
-        linkedInUrl:
-          type: string
-          nullable: true
-          format: uri
-          description: LinkedIn company page URL
-          example: https://linkedin.com/company/acme
-        description:
-          type: string
-          nullable: true
-          description: Free-form description of the account
-          example: B2B SaaS for the manufacturing sector.
-        createdAt:
-          type: string
-          format: date-time
-          description: When the account was created
-          example: '2025-09-01T10:00:00.000Z'
-        updatedAt:
-          type: string
-          format: date-time
-          description: When the account was last updated
-          example: '2025-11-15T14:30:00.000Z'
-      required:
-      - id
-      - name
-      - domain
-      - numEmployees
-      - linkedInUrl
-      - description
-      - createdAt
-      - updatedAt
   securitySchemes:
     BearerAuth:
       type: http

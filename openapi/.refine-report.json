@@ -1,0 +1,53 @@
+{
+  "provider": "nooks",
+  "sources": [
+    "_original/nooks-sequencing-openapi.yml"
+  ],
+  "outputs": [
+    "nooks-accounts-api-openapi.yml",
+    "nooks-calldispositions-api-openapi.yml",
+    "nooks-calls-api-openapi.yml",
+    "nooks-emailtemplates-api-openapi.yml",
+    "nooks-emails-api-openapi.yml",
+    "nooks-introspection-api-openapi.yml",
+    "nooks-mailboxes-api-openapi.yml",
+    "nooks-nooks-sequencing-api-api-openapi.yml",
+    "nooks-notes-api-openapi.yml",
+    "nooks-prospects-api-openapi.yml",
+    "nooks-sequencestates-api-openapi.yml",
+    "nooks-sequencesteps-api-openapi.yml",
+    "nooks-sequences-api-openapi.yml",
+    "nooks-tasks-api-openapi.yml",
+    "nooks-users-api-openapi.yml"
+  ],
+  "archived": [
+    "deleted 3 superseded output(s) from the previous generation"
+  ],
+  "errors": [],
+  "warnings": [],
+  "notes": [
+    "sourced from openapi/_original/ (1 archived document(s)); previously refined output at the top level was skipped rather than re-split",
+    "nooks-sequencing-openapi.yml: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "nooks-sequencing-openapi.yml: tagged webhooks POST call.logged -> Nooks Sequencing API",
+    "nooks-sequencing-openapi.yml: declared missing tag: Nooks Sequencing API",
+    "superseded outputs removed: nooks-call-dispositions-api-openapi.yml, nooks-email-templates-api-openapi.yml, nooks-sequence-states-api-openapi.yml",
+    "apis.yml register: written (+3 apis, 16 total)"
+  ],
+  "skipped": [
+    "nooks-accounts-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-call-dispositions-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-calls-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-email-templates-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-emails-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-introspection-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-mailboxes-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-nooks-sequencing-api-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-notes-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-prospects-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-sequence-states-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-sequences-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-sequencesteps-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-tasks-api-openapi.yml: previously refined output, superseded by openapi/_original/",
+    "nooks-users-api-openapi.yml: previously refined output, superseded by openapi/_original/"
+  ]
+}

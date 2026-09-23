@@ -2,7 +2,7 @@ openapi: 3.2.0
 info:
   title: Nooks Sequencing Prospects API
   version: 0.1.0
-  description: "The Nooks Sequencing API provides programmatic access to manage sequences, tasks, templates, and prospect engagement workflows created using the Nooks SEP.\n\n## Authentication\n\nSend a bearer token in the `Authorization` header:\n```\nAuthorization: Bearer <token>\n```\n\nTwo token types are accepted on the same header — the API detects which\nformat you sent and validates accordingly. If you already have a token,\npaste it into the Authentication panel and skip the flow setup.\n\n### API keys\n\nLong-lived, workspace-scoped. Best for backend integrations and\nserver-to-server automation. Generate one from **Developer Settings →\nAPI Keys** in your Nooks workspace. API keys are prefixed `nooks-api-`\nand have full read/write access within the owning workspace.\n\n### OAuth 2.0 access tokens\n\nShort-lived (1 hour), user-scoped, scope-limited JWTs issued by\n`https://oauth.nooks.in` via the standard authorization-code + PKCE flow.\nBest for third-party apps acting on behalf of a specific user — the token\ncarries that user's identity and a subset of scopes the user consented\nto. Refresh tokens rotate every 90 days and are invalidated on first\nre-use (refresh-token reuse detection).\n\n**Endpoints:**\n\n- Authorize: `https://oauth.nooks.in/oauth/authorize`\n- Token: `https://oauth.nooks.in/oauth/token`\n- JWKS: `https://oauth.nooks.in/.well-known/jwks.json`\n- Server metadata (RFC 8414): `https://oauth.nooks.in/.well-known/oauth-authorization-server`\n\n**Available scopes:**\n\n| Scope | Grants |\n| --- | --- |\n| `prospects:read` | View your prospects |\n| `prospects:write` | Create and update prospects |\n| `sequences:read` | View your sequences |\n| `sequences:write` | Create and update sequences |\n| `sequence-steps:read` | View sequence steps |\n| `sequence-states:read` | View sequence enrollments |\n| `sequence-states:write` | Enroll prospects and manage enrollments |\n| `tasks:read` | View your tasks |\n| `tasks:write` | Create, update, complete, skip, and delete tasks |\n| `calls:read` | View your calls |\n| `calls:write` | Create and update calls |\n| `call-dispositions:read` | View call dispositions |\n| `emails:read` | View your emails |\n| `emails:write` | Create and update emails |\n| `mailboxes:read` | View connected mailboxes |\n| `users:read` | View users in your workspace |\n| `accounts:read` | View accounts (companies) in your workspace |\n| `notes:write` | Create notes on CRM-backed prospects and accounts |\n| `opportunities:read` | View opportunities (deals) in your workspace |\n| `search:read` | Search across your prospects, accounts, and other records |\n\n## Rate Limiting\nAPI requests are rate limited per workspace and per endpoint in a fixed\none-minute window. Separate endpoint buckets do not share quota, except\nroutes without an explicit limit use the shared default bucket.\n\nEvery response includes these headers:\n- `X-RateLimit-Limit` -- maximum requests allowed in the current per-minute window\n- `X-RateLimit-Remaining` -- requests remaining in the current window\n- `X-RateLimit-Reset` -- seconds until the current window resets\n\nWhen the limit is exceeded the API returns `429 Too Many Requests` with a\n`Retry-After` header indicating how many seconds to wait before retrying.\n\n**Current limits:**\n\n| Endpoint class | Methods | Limit |\n| --- | --- | --- |\n| List reads: `/sequences`, `/emails`, `/users`, `/sequenceStates`, `/prospects`, `/mailboxes`, `/calls`, `/sequenceSteps`, `/callDispositions`, `/tasks`, `/accounts` | `GET` | 300 requests/minute per endpoint |\n| Read by ID: `/sequences/{id}`, `/emails/{id}`, `/users/{id}`, `/sequenceStates/{id}`, `/prospects/{id}`, `/mailboxes/{id}`, `/calls/{id}`, `/sequenceSteps/{id}`, `/callDispositions/{id}`, `/tasks/{id}`, `/accounts/{id}`, `/emailTemplate/{id}` | `GET` | 600 requests/minute per endpoint |\n| Sequence writes: `/sequences`, `/sequences/{id}` | `POST`, `PATCH` | 120 requests/minute per endpoint |\n| Sequence state writes: `/sequenceStates`, `/sequenceStates/{id}`, `/sequenceStates/{id}/actions/finish` | `POST`, `DELETE` | 120 requests/minute per endpoint |\n| Task writes: `/tasks`, `/tasks/{id}`, `/tasks/{id}/complete`, `/tasks/{id}/skip` | `POST`, `PATCH`, `DELETE` | 120 requests/minute per endpoint |\n| CRM note writes: `/prospects/{id}/notes`, `/accounts/{id}/notes` | `POST` | 30 requests/minute per endpoint |\n| `/integrations/prospects/sync` | `POST` | 10 requests/minute |\n| Any other endpoint | Any | 30 requests/minute, shared default bucket |\n\n## Pagination\nList endpoints support cursor-based pagination using the `page[size]` and `page[after]`/`page[before]` query parameters.\n- Maximum page size: 100\n- Default page size: 50\n\n## Include (Inline Expansion)\nMost GET endpoints support an `include` query parameter that expands related `ReferenceObject` fields inline,\neliminating the need for follow-up API calls.\n\n**Format:** `?include=field1,field2` (comma-separated field names)\n\n**Without include:**\n```json\nGET /v1/prospects/123\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    { \"id\": \"ss-1\", \"_href\": \"/v1/sequenceStates/ss-1\" }\n  ]\n}\n```\n\n**With `include=sequenceStates`:**\n```json\nGET /v1/prospects/123?include=sequenceStates\n\n{\n  \"id\": \"123\",\n  \"sequenceStates\": [\n    {\n      \"id\": \"ss-1\",\n      \"_href\": \"/v1/sequenceStates/ss-1\",\n      \"state\": \"active\",\n      \"sequence\": { \"id\": \"seq-1\", \"_href\": \"/v1/sequences/seq-1\" },\n      \"prospect\": { \"id\": \"123\", \"_href\": \"/v1/prospects/123\" },\n      \"creator\": { \"id\": \"u-1\", \"_href\": \"/v1/users/u-1\" },\n      \"sequenceStep\": null,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"updatedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ]\n}\n```\n\nThe expanded object is a superset of `ReferenceObject` — it keeps `id` and `_href` and adds all DTO fields.\nThe response shape is unchanged; the field just contains richer data.\n\n**Hard constraints (enforced with 400 errors):**\n- **Max 3 includes per request.** Requesting more than 3 comma-separated values returns `400: \"include accepts at most 3 values\"`.\n- **GET endpoints only.** POST, PATCH, and DELETE endpoints do not accept `include`.\n- **No nested includes.** Only top-level field names are valid (e.g., `sequenceStates`). Dot-notation like `sequenceStates.prospect` returns 400.\n- **`account` on Prospect is not includable.** Requesting `include=account` returns 400.\n\nEach endpoint's `include` parameter lists the valid field names for that resource.\n"
+  description: The Nooks Sequencing API provides programmatic access to manage sequences, tasks, templates, and prospect engagement workflows created using the Nooks SEP.
   contact:
     name: Nooks API Support
     email: support@nooks.in
@@ -26,7 +26,51 @@ paths:
     get:
       operationId: listProspects
       summary: List prospects
-      description: "Returns a paginated list of prospects. Supports filtering by prospect IDs, sequence enrollment, or account.\n\nExample:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/prospects?page[size]=50' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by specific IDs:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/prospects?filter[id]=UUID1,UUID2' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by sequence enrollment:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/prospects?filter[sequence][id]=550e8400-e29b-41d4-a716-446655440000' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n\nFilter by account:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/prospects?filter[account][id]=990e8400-e29b-41d4-a716-446655440099' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      description: 'Returns a paginated list of prospects. Supports filtering by prospect IDs, sequence enrollment, or account.
+
+
+        Example:
+
+        ```bash
+
+        curl -X GET ''https://partner-api.nooks.in/v1/prospects?page[size]=50'' \
+
+        -H "Authorization: Bearer nooks-api-..."
+
+        ```
+
+
+        Filter by specific IDs:
+
+        ```bash
+
+        curl -X GET ''https://partner-api.nooks.in/v1/prospects?filter[id]=UUID1,UUID2'' \
+
+        -H "Authorization: Bearer nooks-api-..."
+
+        ```
+
+
+        Filter by sequence enrollment:
+
+        ```bash
+
+        curl -X GET ''https://partner-api.nooks.in/v1/prospects?filter[sequence][id]=550e8400-e29b-41d4-a716-446655440000'' \
+
+        -H "Authorization: Bearer nooks-api-..."
+
+        ```
+
+
+        Filter by account:
+
+        ```bash
+
+        curl -X GET ''https://partner-api.nooks.in/v1/prospects?filter[account][id]=990e8400-e29b-41d4-a716-446655440099'' \
+
+        -H "Authorization: Bearer nooks-api-..."
+
+        ```'
       tags:
       - Prospects
       parameters:
@@ -159,7 +203,32 @@ paths:
     post:
       operationId: syncProspects
       summary: Sync prospects from CRM
-      description: "Syncs up to 100 CRM records (Salesforce or HubSpot) into Nooks prospects by `externalId`, creating them if they don't already exist. Per-record outcomes are returned in `results` and `errors`.\n\nExample:\n```bash\ncurl -X POST 'https://partner-api.nooks.in/v1/integrations/prospects/sync' \\\n  -H \"Authorization: Bearer nooks-api-...\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"data\": {\n      \"type\": \"salesforce\",\n      \"records\": [\"003ABC123DEF456\", \"003XYZ789GHI012\"]\n    }\n  }'\n```\n"
+      description: 'Syncs up to 100 CRM records (Salesforce or HubSpot) into Nooks prospects by `externalId`, creating them if they don''t already exist. Per-record outcomes are returned in `results` and `errors`.
+
+
+        Example:
+
+        ```bash
+
+        curl -X POST ''https://partner-api.nooks.in/v1/integrations/prospects/sync'' \
+
+        -H "Authorization: Bearer nooks-api-..." \
+
+        -H "Content-Type: application/json" \
+
+        -d ''{
+
+        "data": {
+
+        "type": "salesforce",
+
+        "records": ["003ABC123DEF456", "003XYZ789GHI012"]
+
+        }
+
+        }''
+
+        ```'
       tags:
       - Prospects
       requestBody:
@@ -214,7 +283,18 @@ paths:
     get:
       operationId: getProspect
       summary: Get prospect by ID
-      description: "Returns a single prospect by its unique identifier.\n\nExample:\n```bash\ncurl -X GET 'https://partner-api.nooks.in/v1/prospects/990e8400-e29b-41d4-a716-446655440020' \\\n  -H \"Authorization: Bearer nooks-api-...\"\n```\n"
+      description: 'Returns a single prospect by its unique identifier.
+
+
+        Example:
+
+        ```bash
+
+        curl -X GET ''https://partner-api.nooks.in/v1/prospects/990e8400-e29b-41d4-a716-446655440020'' \
+
+        -H "Authorization: Bearer nooks-api-..."
+
+        ```'
       tags:
       - Prospects
       parameters:
@@ -278,12 +358,6 @@ paths:
           $ref: '#/components/responses/InternalError'
 components:
   schemas:
-    SyncableCrmType:
-      type: string
-      enum:
-      - salesforce
-      - hubspot
-      description: The CRM integration to sync from.
     SyncProspectsResponse:
       type: object
       description: Response body for POST /integrations/prospects/sync.
@@ -328,57 +402,6 @@ components:
           nullable: true
           description: URL for the next page (null if on last page)
           example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    Error:
-      type: object
-      description: Standard error response
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
-          type: string
-          description: 'Request trace identifier for correlating this error with server
-
-            logs and support requests. Present whenever the request carried a
-
-            trace context (the normal case); omitted otherwise.
-
-            '
-          example: abc123def456
-    SyncProspectsRequest:
-      type: object
-      description: Request body for POST /integrations/prospects/sync.
-      additionalProperties: false
-      properties:
-        data:
-          type: object
-          additionalProperties: false
-          properties:
-            type:
-              $ref: '#/components/schemas/SyncableCrmType'
-            records:
-              type: array
-              minItems: 1
-              maxItems: 100
-              description: External ids of the CRM records to sync.
-              items:
-                type: string
-                minLength: 1
-                description: The CRM record's external id (Salesforce Contact/Lead Id, or HubSpot contact id).
-                example: 003ABC123DEF456
-          required:
-          - type
-          - records
-      required:
-      - data
     NoCrmConnectionError:
       type: object
       description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
@@ -409,6 +432,58 @@ components:
           example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
       required:
       - error
+    SyncProspectResult:
+      type: object
+      description: Per-record success entry from a sync call.
+      properties:
+        externalId:
+          type: string
+          description: The CRM external id supplied in the request.
+          example: 003ABC123DEF456
+        prospectId:
+          type: string
+          format: uuid
+          description: The Nooks prospect UUID.
+          example: 990e8400-e29b-41d4-a716-446655440020
+        created:
+          type: boolean
+          description: True if the row was inserted; false if it was updated.
+          example: true
+      required:
+      - externalId
+      - prospectId
+      - created
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
+    SyncableCrmType:
+      type: string
+      enum:
+      - salesforce
+      - hubspot
+      description: The CRM integration to sync from.
     Prospect:
       type: object
       description: A sales prospect
@@ -514,27 +589,32 @@ components:
       - externalId
       - code
       - message
-    SyncProspectResult:
+    SyncProspectsRequest:
       type: object
-      description: Per-record success entry from a sync call.
+      description: Request body for POST /integrations/prospects/sync.
+      additionalProperties: false
       properties:
-        externalId:
-          type: string
-          description: The CRM external id supplied in the request.
-          example: 003ABC123DEF456
-        prospectId:
-          type: string
-          format: uuid
-          description: The Nooks prospect UUID.
-          example: 990e8400-e29b-41d4-a716-446655440020
-        created:
-          type: boolean
-          description: True if the row was inserted; false if it was updated.
-          example: true
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            type:
+              $ref: '#/components/schemas/SyncableCrmType'
+            records:
+              type: array
+              minItems: 1
+              maxItems: 100
+              description: External ids of the CRM records to sync.
+              items:
+                type: string
+                minLength: 1
+                description: The CRM record's external id (Salesforce Contact/Lead Id, or HubSpot contact id).
+                example: 003ABC123DEF456
+          required:
+          - type
+          - records
       required:
-      - externalId
-      - prospectId
-      - created
+      - data
     ReferenceObject:
       type: object
       description: A reference to a related resource
@@ -551,6 +631,16 @@ components:
       - id
       - _href
   responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
     Unauthorized:
       description: Unauthorized - invalid or missing API key
       content:
@@ -579,16 +669,6 @@ components:
             error:
               code: RATE_LIMIT_EXCEEDED
               message: Rate limit exceeded
-    InternalError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: INTERNAL_ERROR
-              message: An unexpected error occurred
     BadRequest:
       description: Bad request - invalid parameters
       content:
@@ -599,17 +679,42 @@ components:
             error:
               code: BAD_REQUEST
               message: Invalid page[after] cursor
-    NotFound:
-      description: Resource not found
+    InternalError:
+      description: Internal server error
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
             error:
-              code: NOT_FOUND
-              message: The requested resource was not found
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
   parameters:
+    FilterId:
+      name: filter[id]
+      in: query
+      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
+      required: false
+      schema:
+        type: string
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
+      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
+    PageBefore:
+      name: page[before]
+      in: query
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
     PageSize:
       name: page[size]
       in: query
@@ -621,15 +726,6 @@ components:
         maximum: 100
         default: 50
       example: 50
-    FilterId:
-      name: filter[id]
-      in: query
-      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
-      required: false
-      schema:
-        type: string
-        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
-      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
     PageAfter:
       name: page[after]
       in: query
@@ -640,22 +736,6 @@ components:
         pass values they received from a previous response. Malformed
 
         cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    PageBefore:
-      name: page[before]
-      in: query
-      description: 'Cursor for fetching the previous page. Opaque token returned by
-
-        the API in `links.prev`; callers should treat it as opaque and
-
-        only pass values they received from a previous response.
-
-        Malformed cursors return `400 Bad Request`.
 
         '
       required: false

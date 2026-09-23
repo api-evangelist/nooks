@@ -1,0 +1,307 @@
+openapi: 3.2.0
+info:
+  title: Nooks Sequencing Email Templates API
+  version: 0.1.0
+  description: The Nooks Sequencing API provides programmatic access to manage sequences, tasks, templates, and prospect engagement workflows created using the Nooks SEP.
+  contact:
+    name: Nooks API Support
+    email: support@nooks.in
+    url: https://www.nooks.in
+  license:
+    name: Proprietary
+  x-logo:
+    url: ./nooks-logo.svg
+    altText: Nooks Logo
+    href: https://www.nooks.ai
+servers:
+- url: https://partner-api.nooks.in/v1
+  description: Production API
+security:
+- BearerAuth: []
+tags:
+- name: Email Templates
+  description: Access email template content
+paths:
+  /emailTemplate/{id}:
+    get:
+      operationId: getEmailTemplate
+      summary: Get email template by ID
+      description: 'Returns the full content of a single email template by its unique identifier.
+
+        Template IDs are typically discovered via the `template` reference on a sequence step
+
+        (use `GET /v1/sequenceSteps/{id}?include=template` to inline the template DTO directly).
+
+
+        Example:
+
+        ```bash
+
+        curl -X GET ''https://partner-api.nooks.in/v1/emailTemplate/ee0e8400-e29b-41d4-a716-446655440080'' \
+
+        -H "Authorization: Bearer nooks-api-..."
+
+        ```'
+      tags:
+      - Email Templates
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: Unique identifier for the email template
+        schema:
+          type: string
+          format: uuid
+        example: ee0e8400-e29b-41d4-a716-446655440080
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplate'
+              example:
+                id: ee0e8400-e29b-41d4-a716-446655440080
+                name: Initial outreach
+                subject: Quick question, {{firstName}}
+                htmlBody: <p>Hi {{firstName}},</p><p>...</p>
+                source: manual
+                archived: false
+                order: 0
+                owner:
+                  id: KKLvN5wQoghWFwUvC75CZ12QM7I3
+                  _href: /v1/users/KKLvN5wQoghWFwUvC75CZ12QM7I3
+                privacy: team_editable
+                createdAt: '2025-10-01T10:00:00.000Z'
+                updatedAt: '2025-10-01T10:00:00.000Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  responses:
+    RateLimitExceeded:
+      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
+
+        rate limit (see headers in the rate-limiting section) or an
+
+        upstream CRM (Salesforce / HubSpot) rate limit hit while
+
+        servicing the request. Retry after the `Retry-After` interval.
+
+        '
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Rate limit exceeded
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid page[after] cursor
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+  schemas:
+    EmailTemplate:
+      type: object
+      description: An email template stored in the workspace. Templates are referenced by sequence steps and contain the body content sent to prospects.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the email template
+          example: ee0e8400-e29b-41d4-a716-446655440080
+        name:
+          type: string
+          nullable: true
+          description: Display name of the template
+          example: Initial outreach
+        subject:
+          type: string
+          nullable: true
+          description: Email subject line. May contain merge fields (e.g. `{{firstName}}`).
+          example: Quick question, {{firstName}}
+        htmlBody:
+          type: string
+          nullable: true
+          description: HTML body of the email. This is the source of truth; plain-text rendering is derived from it at send time.
+          example: <p>Hi {{firstName}},</p><p>...</p>
+        source:
+          type: string
+          description: How the template was created (e.g. `manual`, `ai`)
+          example: manual
+        archived:
+          type: boolean
+          description: Whether the template has been archived
+          example: false
+        order:
+          type: integer
+          description: Sort order of the template within the workspace
+          example: 0
+        owner:
+          nullable: true
+          description: The user who owns the template, or null if unowned
+          allOf:
+          - $ref: '#/components/schemas/ReferenceObject'
+        privacy:
+          type: string
+          enum:
+          - private
+          - team_visible
+          - team_editable
+          description: 'Privacy level of the template:
+
+            - `private`: Only the owner (and workspace managers/admins) can view or edit it in Nooks.
+
+            - `team_visible`: All team members can view; only the owner can edit.
+
+            - `team_editable`: All team members can view and edit (the default).
+
+
+            Always present. Reflects how the template is shared within the
+
+            workspace in Nooks.
+
+            '
+          example: team_editable
+        createdAt:
+          type: string
+          format: date-time
+          description: When the template was created
+          example: '2025-10-01T10:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the template was last updated
+          example: '2025-10-01T10:00:00.000Z'
+      required:
+      - id
+      - name
+      - subject
+      - htmlBody
+      - source
+      - archived
+      - order
+      - owner
+      - privacy
+      - createdAt
+      - updatedAt
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
+    ReferenceObject:
+      type: object
+      description: A reference to a related resource
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: 'Bearer token sent in the `Authorization` header. Accepts either a
+
+        long-lived Nooks API key (`nooks-api-...`, from Developer Settings →
+
+        API Keys) or an OAuth 2.0 access token issued by
+
+        `https://oauth.nooks.in`. Use whichever you already have — the API
+
+        validates both formats on the same header. For full OAuth flow
+
+        details (authorize/token endpoints, scopes, refresh behavior) see
+
+        the Authentication section of this spec''s introduction.
+
+        '
+x-tagGroups:
+- name: API Reference
+  tags:
+  - Sequences
+  - SequenceSteps
+  - Emails
+  - Users
+  - SequenceStates
+  - Prospects
+  - Accounts
+  - Notes
+  - Mailboxes
+  - Calls
+  - CallDispositions
+  - Tasks
+  - EmailTemplates
+  - Introspection
