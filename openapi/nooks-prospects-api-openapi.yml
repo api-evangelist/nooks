@@ -358,132 +358,6 @@ paths:
           $ref: '#/components/responses/InternalError'
 components:
   schemas:
-    SyncProspectsResponse:
-      type: object
-      description: Response body for POST /integrations/prospects/sync.
-      properties:
-        results:
-          type: array
-          description: Successfully-synced records. Order is not guaranteed.
-          items:
-            $ref: '#/components/schemas/SyncProspectResult'
-        errors:
-          type: array
-          description: Per-record failures. Empty when every record succeeded.
-          items:
-            $ref: '#/components/schemas/SyncProspectError'
-      required:
-      - results
-      - errors
-    PaginationLinks:
-      type: object
-      description: 'Pagination links for navigating through results.
-
-        Links are returned as relative references (path + query) that
-
-        should be resolved against the base URL of the request.
-
-        '
-      properties:
-        first:
-          type: string
-          format: uri-reference
-          description: URL for the first page
-          example: /v1/sequences?page[size]=50
-        prev:
-          type: string
-          format: uri-reference
-          nullable: true
-          description: URL for the previous page (null if on first page)
-          example: null
-        next:
-          type: string
-          format: uri-reference
-          nullable: true
-          description: URL for the next page (null if on last page)
-          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    NoCrmConnectionError:
-      type: object
-      description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
-
-        '
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-              - NO_CRM_CONNECTION
-              example: NO_CRM_CONNECTION
-            message:
-              type: string
-              description: Human-readable remediation text; display-only (do not parse).
-              example: Your salesforce connection is no longer valid. Reconnect salesforce in Nooks.
-            integrationType:
-              $ref: '#/components/schemas/SyncableCrmType'
-          required:
-          - code
-          - message
-          - integrationType
-        traceId:
-          type: string
-          description: Request trace id, for correlating with Nooks support.
-          example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
-      required:
-      - error
-    SyncProspectResult:
-      type: object
-      description: Per-record success entry from a sync call.
-      properties:
-        externalId:
-          type: string
-          description: The CRM external id supplied in the request.
-          example: 003ABC123DEF456
-        prospectId:
-          type: string
-          format: uuid
-          description: The Nooks prospect UUID.
-          example: 990e8400-e29b-41d4-a716-446655440020
-        created:
-          type: boolean
-          description: True if the row was inserted; false if it was updated.
-          example: true
-      required:
-      - externalId
-      - prospectId
-      - created
-    Error:
-      type: object
-      description: Standard error response
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
-          type: string
-          description: 'Request trace identifier for correlating this error with server
-
-            logs and support requests. Present whenever the request carried a
-
-            trace context (the normal case); omitted otherwise.
-
-            '
-          example: abc123def456
-    SyncableCrmType:
-      type: string
-      enum:
-      - salesforce
-      - hubspot
-      description: The CRM integration to sync from.
     Prospect:
       type: object
       description: A sales prospect
@@ -563,32 +437,46 @@ components:
       - sequenceStates
       - createdAt
       - updatedAt
-    SyncProspectError:
+    ReferenceObject:
       type: object
-      description: Per-record failure entry from a sync call.
+      description: A reference to a related resource
       properties:
-        externalId:
+        id:
           type: string
-          example: 003ABC123DEF456
-        code:
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
           type: string
-          enum:
-          - NOT_FOUND_IN_CRM
-          - MAPPING_FAILED
-          description: '* `NOT_FOUND_IN_CRM` — the CRM had no record for the given `externalId`.
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
 
-            * `MAPPING_FAILED` — failed to map a Nooks prospect to the CRM record.
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
 
             '
-          example: NOT_FOUND_IN_CRM
-        message:
-          type: string
-          description: Human-readable detail.
-          example: No record found in salesforce for externalId 003ABC123DEF456
-      required:
-      - externalId
-      - code
-      - message
+          example: abc123def456
     SyncProspectsRequest:
       type: object
       description: Request body for POST /integrations/prospects/sync.
@@ -615,21 +503,186 @@ components:
           - records
       required:
       - data
-    ReferenceObject:
+    SyncProspectError:
       type: object
-      description: A reference to a related resource
+      description: Per-record failure entry from a sync call.
       properties:
-        id:
+        externalId:
           type: string
-          description: Unique identifier of the referenced resource
-          example: 550e8400-e29b-41d4-a716-446655440000
-        _href:
+          example: 003ABC123DEF456
+        code:
           type: string
-          description: API path to the referenced resource
-          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+          enum:
+          - NOT_FOUND_IN_CRM
+          - MAPPING_FAILED
+          description: '* `NOT_FOUND_IN_CRM` — the CRM had no record for the given `externalId`.
+
+            * `MAPPING_FAILED` — failed to map a Nooks prospect to the CRM record.
+
+            '
+          example: NOT_FOUND_IN_CRM
+        message:
+          type: string
+          description: Human-readable detail.
+          example: No record found in salesforce for externalId 003ABC123DEF456
       required:
-      - id
-      - _href
+      - externalId
+      - code
+      - message
+    NoCrmConnectionError:
+      type: object
+      description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
+
+        '
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+              - NO_CRM_CONNECTION
+              example: NO_CRM_CONNECTION
+            message:
+              type: string
+              description: Human-readable remediation text; display-only (do not parse).
+              example: Your salesforce connection is no longer valid. Reconnect salesforce in Nooks.
+            integrationType:
+              $ref: '#/components/schemas/SyncableCrmType'
+          required:
+          - code
+          - message
+          - integrationType
+        traceId:
+          type: string
+          description: Request trace id, for correlating with Nooks support.
+          example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
+      required:
+      - error
+    SyncProspectsResponse:
+      type: object
+      description: Response body for POST /integrations/prospects/sync.
+      properties:
+        results:
+          type: array
+          description: Successfully-synced records. Order is not guaranteed.
+          items:
+            $ref: '#/components/schemas/SyncProspectResult'
+        errors:
+          type: array
+          description: Per-record failures. Empty when every record succeeded.
+          items:
+            $ref: '#/components/schemas/SyncProspectError'
+      required:
+      - results
+      - errors
+    PaginationLinks:
+      type: object
+      description: 'Pagination links for navigating through results.
+
+        Links are returned as relative references (path + query) that
+
+        should be resolved against the base URL of the request.
+
+        '
+      properties:
+        first:
+          type: string
+          format: uri-reference
+          description: URL for the first page
+          example: /v1/sequences?page[size]=50
+        prev:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the previous page (null if on first page)
+          example: null
+        next:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the next page (null if on last page)
+          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    SyncProspectResult:
+      type: object
+      description: Per-record success entry from a sync call.
+      properties:
+        externalId:
+          type: string
+          description: The CRM external id supplied in the request.
+          example: 003ABC123DEF456
+        prospectId:
+          type: string
+          format: uuid
+          description: The Nooks prospect UUID.
+          example: 990e8400-e29b-41d4-a716-446655440020
+        created:
+          type: boolean
+          description: True if the row was inserted; false if it was updated.
+          example: true
+      required:
+      - externalId
+      - prospectId
+      - created
+    SyncableCrmType:
+      type: string
+      enum:
+      - salesforce
+      - hubspot
+      description: The CRM integration to sync from.
+  parameters:
+    PageSize:
+      name: page[size]
+      in: query
+      description: Number of items per page (max 100)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      example: 50
+    FilterId:
+      name: filter[id]
+      in: query
+      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
+      required: false
+      schema:
+        type: string
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
+      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
+    PageAfter:
+      name: page[after]
+      in: query
+      description: 'Cursor for fetching the next page. Opaque token returned by the
+
+        API in `links.next`; callers should treat it as opaque and only
+
+        pass values they received from a previous response. Malformed
+
+        cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    PageBefore:
+      name: page[before]
+      in: query
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
   responses:
     NotFound:
       description: Resource not found
@@ -641,16 +694,6 @@ components:
             error:
               code: NOT_FOUND
               message: The requested resource was not found
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
     RateLimitExceeded:
       description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
 
@@ -669,6 +712,16 @@ components:
             error:
               code: RATE_LIMIT_EXCEEDED
               message: Rate limit exceeded
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
     BadRequest:
       description: Bad request - invalid parameters
       content:
@@ -689,59 +742,6 @@ components:
             error:
               code: INTERNAL_ERROR
               message: An unexpected error occurred
-  parameters:
-    FilterId:
-      name: filter[id]
-      in: query
-      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
-      required: false
-      schema:
-        type: string
-        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
-      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
-    PageBefore:
-      name: page[before]
-      in: query
-      description: 'Cursor for fetching the previous page. Opaque token returned by
-
-        the API in `links.prev`; callers should treat it as opaque and
-
-        only pass values they received from a previous response.
-
-        Malformed cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    PageSize:
-      name: page[size]
-      in: query
-      description: Number of items per page (max 100)
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 50
-      example: 50
-    PageAfter:
-      name: page[after]
-      in: query
-      description: 'Cursor for fetching the next page. Opaque token returned by the
-
-        API in `links.next`; callers should treat it as opaque and only
-
-        pass values they received from a previous response. Malformed
-
-        cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
   securitySchemes:
     BearerAuth:
       type: http

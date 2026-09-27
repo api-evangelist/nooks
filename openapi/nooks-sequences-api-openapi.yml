@@ -541,79 +541,47 @@ paths:
           $ref: '#/components/responses/InternalError'
 components:
   schemas:
-    Analytics:
+    ReferenceObject:
       type: object
-      description: 'Channel-grouped engagement counts, returned only when requested via
-
-        `include=analytics`. Counts are lifetime totals (not date-windowed)
-
-        and are raw counts, not rates — pick your own denominators.
-
-
-        All three keys are always present. A group is `null` if and only if
-
-        the channel is not applicable to the object: on a SequenceStep, only
-
-        the group matching the step''s `action` channel is populated; on a
-
-        Sequence, a group is populated when the sequence has at least one step
-
-        of that channel (summed over its steps). `null` always means "channel
-
-        not applicable here" — never "not computed". Zero means "applicable,
-
-        nothing happened yet". Steps whose channel has no tracked analytics
-
-        (`basic_task`, SMS) have all three groups `null`.
-
-        '
+      description: A reference to a related resource
       properties:
-        email:
-          nullable: true
-          description: Email engagement counts, or null if this object has no email channel
-          allOf:
-          - $ref: '#/components/schemas/EmailAnalytics'
-        calls:
-          nullable: true
-          description: Call outcome counts, or null if this object has no call channel
-          allOf:
-          - $ref: '#/components/schemas/CallAnalytics'
-        linkedIn:
-          nullable: true
-          description: LinkedIn engagement counts, or null if this object has no LinkedIn channel
-          allOf:
-          - $ref: '#/components/schemas/LinkedInAnalytics'
+        id:
+          type: string
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
       required:
-      - email
-      - calls
-      - linkedIn
-    PaginationLinks:
+      - id
+      - _href
+    CallAnalytics:
       type: object
-      description: 'Pagination links for navigating through results.
+      description: 'Lifetime call outcome counts. Within a single step, each enrolled
 
-        Links are returned as relative references (path + query) that
+        prospect is counted once, by the furthest outcome reached (not once
 
-        should be resolved against the base URL of the request.
+        per dial). Counts nest numerically (meetings ≤ connected ≤ dialed).
 
         '
       properties:
-        first:
-          type: string
-          format: uri-reference
-          description: URL for the first page
-          example: /v1/sequences?page[size]=50
-        prev:
-          type: string
-          format: uri-reference
-          nullable: true
-          description: URL for the previous page (null if on first page)
-          example: null
-        next:
-          type: string
-          format: uri-reference
-          nullable: true
-          description: URL for the next page (null if on last page)
-          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+        dialed:
+          type: integer
+          description: Prospects dialed
+          example: 380
+        connected:
+          type: integer
+          description: Prospects where a call connected
+          example: 71
+        meetings:
+          type: integer
+          description: Prospects where a meeting was booked
+          example: 5
+      required:
+      - dialed
+      - connected
+      - meetings
     LinkedInAnalytics:
       type: object
       description: 'Lifetime LinkedIn engagement counts for sequence-attributed activity.
@@ -658,6 +626,31 @@ components:
       - connectionRequestsAccepted
       - messagesSent
       - repliesReceived
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
     Sequence:
       type: object
       description: A sales sequence defining a series of outreach steps
@@ -758,72 +751,79 @@ components:
       - privacy
       - createdAt
       - updatedAt
-    CallAnalytics:
+    Analytics:
       type: object
-      description: 'Lifetime call outcome counts. Within a single step, each enrolled
+      description: 'Channel-grouped engagement counts, returned only when requested via
 
-        prospect is counted once, by the furthest outcome reached (not once
+        `include=analytics`. Counts are lifetime totals (not date-windowed)
 
-        per dial). Counts nest numerically (meetings ≤ connected ≤ dialed).
+        and are raw counts, not rates — pick your own denominators.
+
+
+        All three keys are always present. A group is `null` if and only if
+
+        the channel is not applicable to the object: on a SequenceStep, only
+
+        the group matching the step''s `action` channel is populated; on a
+
+        Sequence, a group is populated when the sequence has at least one step
+
+        of that channel (summed over its steps). `null` always means "channel
+
+        not applicable here" — never "not computed". Zero means "applicable,
+
+        nothing happened yet". Steps whose channel has no tracked analytics
+
+        (`basic_task`, SMS) have all three groups `null`.
 
         '
       properties:
-        dialed:
-          type: integer
-          description: Prospects dialed
-          example: 380
-        connected:
-          type: integer
-          description: Prospects where a call connected
-          example: 71
-        meetings:
-          type: integer
-          description: Prospects where a meeting was booked
-          example: 5
+        email:
+          nullable: true
+          description: Email engagement counts, or null if this object has no email channel
+          allOf:
+          - $ref: '#/components/schemas/EmailAnalytics'
+        calls:
+          nullable: true
+          description: Call outcome counts, or null if this object has no call channel
+          allOf:
+          - $ref: '#/components/schemas/CallAnalytics'
+        linkedIn:
+          nullable: true
+          description: LinkedIn engagement counts, or null if this object has no LinkedIn channel
+          allOf:
+          - $ref: '#/components/schemas/LinkedInAnalytics'
       required:
-      - dialed
-      - connected
-      - meetings
-    Error:
+      - email
+      - calls
+      - linkedIn
+    PaginationLinks:
       type: object
-      description: Standard error response
+      description: 'Pagination links for navigating through results.
+
+        Links are returned as relative references (path + query) that
+
+        should be resolved against the base URL of the request.
+
+        '
       properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
+        first:
           type: string
-          description: 'Request trace identifier for correlating this error with server
-
-            logs and support requests. Present whenever the request carried a
-
-            trace context (the normal case); omitted otherwise.
-
-            '
-          example: abc123def456
-    ReferenceObject:
-      type: object
-      description: A reference to a related resource
-      properties:
-        id:
+          format: uri-reference
+          description: URL for the first page
+          example: /v1/sequences?page[size]=50
+        prev:
           type: string
-          description: Unique identifier of the referenced resource
-          example: 550e8400-e29b-41d4-a716-446655440000
-        _href:
+          format: uri-reference
+          nullable: true
+          description: URL for the previous page (null if on first page)
+          example: null
+        next:
           type: string
-          description: API path to the referenced resource
-          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
-      required:
-      - id
-      - _href
+          format: uri-reference
+          nullable: true
+          description: URL for the next page (null if on last page)
+          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
     EmailAnalytics:
       type: object
       description: Lifetime email engagement counts.
@@ -860,44 +860,6 @@ components:
       - bounced
       - unsubscribed
   responses:
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: NOT_FOUND
-              message: The requested resource was not found
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
-    RateLimitExceeded:
-      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
-
-        rate limit (see headers in the rate-limiting section) or an
-
-        upstream CRM (Salesforce / HubSpot) rate limit hit while
-
-        servicing the request. Retry after the `Retry-After` interval.
-
-        '
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: RATE_LIMIT_EXCEEDED
-              message: Rate limit exceeded
     UnprocessableEntity:
       description: 'Unprocessable entity - the request was well-formed but cannot be
 
@@ -920,6 +882,44 @@ components:
               message: Unprocessable entity
               details:
                 message: Referenced prospect does not exist
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
+    RateLimitExceeded:
+      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
+
+        rate limit (see headers in the rate-limiting section) or an
+
+        upstream CRM (Salesforce / HubSpot) rate limit hit while
+
+        servicing the request. Retry after the `Retry-After` interval.
+
+        '
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Rate limit exceeded
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
     BadRequest:
       description: Bad request - invalid parameters
       content:
@@ -941,22 +941,6 @@ components:
               code: INTERNAL_ERROR
               message: An unexpected error occurred
   parameters:
-    PageBefore:
-      name: page[before]
-      in: query
-      description: 'Cursor for fetching the previous page. Opaque token returned by
-
-        the API in `links.prev`; callers should treat it as opaque and
-
-        only pass values they received from a previous response.
-
-        Malformed cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
     PageSize:
       name: page[size]
       in: query
@@ -977,6 +961,15 @@ components:
         type: string
         format: date-time
       example: '2026-01-01T00:00:00Z'
+    FilterUpdatedAtGte:
+      name: filter[updatedAt][gte]
+      in: query
+      description: Filter by minimum updatedAt (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2025-01-01T00:00:00Z'
     PageAfter:
       name: page[after]
       in: query
@@ -993,15 +986,22 @@ components:
       schema:
         type: string
       example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    FilterUpdatedAtGte:
-      name: filter[updatedAt][gte]
+    PageBefore:
+      name: page[before]
       in: query
-      description: Filter by minimum updatedAt (ISO 8601 datetime)
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
       required: false
       schema:
         type: string
-        format: date-time
-      example: '2025-01-01T00:00:00Z'
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
   securitySchemes:
     BearerAuth:
       type: http
