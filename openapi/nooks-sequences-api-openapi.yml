@@ -541,47 +541,66 @@ paths:
           $ref: '#/components/responses/InternalError'
 components:
   schemas:
-    ReferenceObject:
+    EmailAnalytics:
       type: object
-      description: A reference to a related resource
+      description: Lifetime email engagement counts.
       properties:
-        id:
-          type: string
-          description: Unique identifier of the referenced resource
-          example: 550e8400-e29b-41d4-a716-446655440000
-        _href:
-          type: string
-          description: API path to the referenced resource
-          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+        delivered:
+          type: integer
+          description: Emails delivered
+          example: 412
+        opened:
+          type: integer
+          description: Emails opened (requires open tracking to be enabled for the workspace)
+          example: 198
+        clicked:
+          type: integer
+          description: Emails with a tracked link click (requires click tracking)
+          example: 41
+        replied:
+          type: integer
+          description: Email replies received
+          example: 23
+        bounced:
+          type: integer
+          description: Emails that bounced
+          example: 7
+        unsubscribed:
+          type: integer
+          description: Unsubscribes attributed to these emails
+          example: 2
       required:
-      - id
-      - _href
-    CallAnalytics:
+      - delivered
+      - opened
+      - clicked
+      - replied
+      - bounced
+      - unsubscribed
+    Error:
       type: object
-      description: 'Lifetime call outcome counts. Within a single step, each enrolled
-
-        prospect is counted once, by the furthest outcome reached (not once
-
-        per dial). Counts nest numerically (meetings ≤ connected ≤ dialed).
-
-        '
+      description: Standard error response
       properties:
-        dialed:
-          type: integer
-          description: Prospects dialed
-          example: 380
-        connected:
-          type: integer
-          description: Prospects where a call connected
-          example: 71
-        meetings:
-          type: integer
-          description: Prospects where a meeting was booked
-          example: 5
-      required:
-      - dialed
-      - connected
-      - meetings
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
     LinkedInAnalytics:
       type: object
       description: 'Lifetime LinkedIn engagement counts for sequence-attributed activity.
@@ -626,31 +645,78 @@ components:
       - connectionRequestsAccepted
       - messagesSent
       - repliesReceived
-    Error:
+    Analytics:
       type: object
-      description: Standard error response
+      description: 'Channel-grouped engagement counts, returned only when requested via
+
+        `include=analytics`. Counts are lifetime totals (not date-windowed)
+
+        and are raw counts, not rates — pick your own denominators.
+
+
+        All three keys are always present. A group is `null` if and only if
+
+        the channel is not applicable to the object: on a SequenceStep, only
+
+        the group matching the step''s `action` channel is populated; on a
+
+        Sequence, a group is populated when the sequence has at least one step
+
+        of that channel (summed over its steps). `null` always means "channel
+
+        not applicable here" — never "not computed". Zero means "applicable,
+
+        nothing happened yet". Steps whose channel has no tracked analytics
+
+        (`basic_task`, SMS) have all three groups `null`.
+
+        '
       properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
-          type: string
-          description: 'Request trace identifier for correlating this error with server
+        email:
+          nullable: true
+          description: Email engagement counts, or null if this object has no email channel
+          allOf:
+          - $ref: '#/components/schemas/EmailAnalytics'
+        calls:
+          nullable: true
+          description: Call outcome counts, or null if this object has no call channel
+          allOf:
+          - $ref: '#/components/schemas/CallAnalytics'
+        linkedIn:
+          nullable: true
+          description: LinkedIn engagement counts, or null if this object has no LinkedIn channel
+          allOf:
+          - $ref: '#/components/schemas/LinkedInAnalytics'
+      required:
+      - email
+      - calls
+      - linkedIn
+    CallAnalytics:
+      type: object
+      description: 'Lifetime call outcome counts. Within a single step, each enrolled
 
-            logs and support requests. Present whenever the request carried a
+        prospect is counted once, by the furthest outcome reached (not once
 
-            trace context (the normal case); omitted otherwise.
+        per dial). Counts nest numerically (meetings ≤ connected ≤ dialed).
 
-            '
-          example: abc123def456
+        '
+      properties:
+        dialed:
+          type: integer
+          description: Prospects dialed
+          example: 380
+        connected:
+          type: integer
+          description: Prospects where a call connected
+          example: 71
+        meetings:
+          type: integer
+          description: Prospects where a meeting was booked
+          example: 5
+      required:
+      - dialed
+      - connected
+      - meetings
     Sequence:
       type: object
       description: A sales sequence defining a series of outreach steps
@@ -751,52 +817,6 @@ components:
       - privacy
       - createdAt
       - updatedAt
-    Analytics:
-      type: object
-      description: 'Channel-grouped engagement counts, returned only when requested via
-
-        `include=analytics`. Counts are lifetime totals (not date-windowed)
-
-        and are raw counts, not rates — pick your own denominators.
-
-
-        All three keys are always present. A group is `null` if and only if
-
-        the channel is not applicable to the object: on a SequenceStep, only
-
-        the group matching the step''s `action` channel is populated; on a
-
-        Sequence, a group is populated when the sequence has at least one step
-
-        of that channel (summed over its steps). `null` always means "channel
-
-        not applicable here" — never "not computed". Zero means "applicable,
-
-        nothing happened yet". Steps whose channel has no tracked analytics
-
-        (`basic_task`, SMS) have all three groups `null`.
-
-        '
-      properties:
-        email:
-          nullable: true
-          description: Email engagement counts, or null if this object has no email channel
-          allOf:
-          - $ref: '#/components/schemas/EmailAnalytics'
-        calls:
-          nullable: true
-          description: Call outcome counts, or null if this object has no call channel
-          allOf:
-          - $ref: '#/components/schemas/CallAnalytics'
-        linkedIn:
-          nullable: true
-          description: LinkedIn engagement counts, or null if this object has no LinkedIn channel
-          allOf:
-          - $ref: '#/components/schemas/LinkedInAnalytics'
-      required:
-      - email
-      - calls
-      - linkedIn
     PaginationLinks:
       type: object
       description: 'Pagination links for navigating through results.
@@ -824,41 +844,83 @@ components:
           nullable: true
           description: URL for the next page (null if on last page)
           example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    EmailAnalytics:
+    ReferenceObject:
       type: object
-      description: Lifetime email engagement counts.
+      description: A reference to a related resource
       properties:
-        delivered:
-          type: integer
-          description: Emails delivered
-          example: 412
-        opened:
-          type: integer
-          description: Emails opened (requires open tracking to be enabled for the workspace)
-          example: 198
-        clicked:
-          type: integer
-          description: Emails with a tracked link click (requires click tracking)
-          example: 41
-        replied:
-          type: integer
-          description: Email replies received
-          example: 23
-        bounced:
-          type: integer
-          description: Emails that bounced
-          example: 7
-        unsubscribed:
-          type: integer
-          description: Unsubscribes attributed to these emails
-          example: 2
+        id:
+          type: string
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
       required:
-      - delivered
-      - opened
-      - clicked
-      - replied
-      - bounced
-      - unsubscribed
+      - id
+      - _href
+  parameters:
+    FilterUpdatedAtGte:
+      name: filter[updatedAt][gte]
+      in: query
+      description: Filter by minimum updatedAt (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2025-01-01T00:00:00Z'
+    PageBefore:
+      name: page[before]
+      in: query
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    PageAfter:
+      name: page[after]
+      in: query
+      description: 'Cursor for fetching the next page. Opaque token returned by the
+
+        API in `links.next`; callers should treat it as opaque and only
+
+        pass values they received from a previous response. Malformed
+
+        cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    PageSize:
+      name: page[size]
+      in: query
+      description: Number of items per page (max 100)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      example: 50
+    FilterUpdatedAtLt:
+      name: filter[updatedAt][lt]
+      in: query
+      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2026-01-01T00:00:00Z'
   responses:
     UnprocessableEntity:
       description: 'Unprocessable entity - the request was well-formed but cannot be
@@ -892,6 +954,36 @@ components:
             error:
               code: NOT_FOUND
               message: The requested resource was not found
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid page[after] cursor
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
     RateLimitExceeded:
       description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
 
@@ -910,98 +1002,6 @@ components:
             error:
               code: RATE_LIMIT_EXCEEDED
               message: Rate limit exceeded
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid page[after] cursor
-    InternalError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: INTERNAL_ERROR
-              message: An unexpected error occurred
-  parameters:
-    PageSize:
-      name: page[size]
-      in: query
-      description: Number of items per page (max 100)
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 50
-      example: 50
-    FilterUpdatedAtLt:
-      name: filter[updatedAt][lt]
-      in: query
-      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
-      required: false
-      schema:
-        type: string
-        format: date-time
-      example: '2026-01-01T00:00:00Z'
-    FilterUpdatedAtGte:
-      name: filter[updatedAt][gte]
-      in: query
-      description: Filter by minimum updatedAt (ISO 8601 datetime)
-      required: false
-      schema:
-        type: string
-        format: date-time
-      example: '2025-01-01T00:00:00Z'
-    PageAfter:
-      name: page[after]
-      in: query
-      description: 'Cursor for fetching the next page. Opaque token returned by the
-
-        API in `links.next`; callers should treat it as opaque and only
-
-        pass values they received from a previous response. Malformed
-
-        cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    PageBefore:
-      name: page[before]
-      in: query
-      description: 'Cursor for fetching the previous page. Opaque token returned by
-
-        the API in `links.prev`; callers should treat it as opaque and
-
-        only pass values they received from a previous response.
-
-        Malformed cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
   securitySchemes:
     BearerAuth:
       type: http

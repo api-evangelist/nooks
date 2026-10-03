@@ -257,62 +257,111 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 components:
-  responses:
-    RateLimitExceeded:
-      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
-
-        rate limit (see headers in the rate-limiting section) or an
-
-        upstream CRM (Salesforce / HubSpot) rate limit hit while
-
-        servicing the request. Retry after the `Retry-After` interval.
-
-        '
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: RATE_LIMIT_EXCEEDED
-              message: Rate limit exceeded
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
-    InternalError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: INTERNAL_ERROR
-              message: An unexpected error occurred
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: NOT_FOUND
-              message: The requested resource was not found
   schemas:
+    CreateNoteRequest:
+      type: object
+      description: Request body for creating a CRM note.
+      additionalProperties: false
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            text:
+              type: string
+              minLength: 1
+              maxLength: 65535
+              description: Note body text. Must contain at least one non-whitespace character.
+              example: Follow up after legal review.
+            integrationType:
+              $ref: '#/components/schemas/CrmNoteIntegrationType'
+          required:
+          - text
+          - integrationType
+      required:
+      - data
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
     CrmNoteIntegrationType:
       type: string
       enum:
       - salesforce
       - hubspot
       description: The CRM integration where the note should be created.
+    NoCrmConnectionError:
+      type: object
+      description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
+
+        '
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+              - NO_CRM_CONNECTION
+              example: NO_CRM_CONNECTION
+            message:
+              type: string
+              description: Human-readable remediation text; display-only (do not parse).
+              example: Your salesforce connection is no longer valid. Reconnect salesforce in Nooks.
+            integrationType:
+              $ref: '#/components/schemas/SyncableCrmType'
+          required:
+          - code
+          - message
+          - integrationType
+        traceId:
+          type: string
+          description: Request trace id, for correlating with Nooks support.
+          example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
+      required:
+      - error
+    SyncableCrmType:
+      type: string
+      enum:
+      - salesforce
+      - hubspot
+      description: The CRM integration to sync from.
+    ReferenceObject:
+      type: object
+      description: A reference to a related resource
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
     Note:
       type: object
       description: A CRM note created through Nooks.
@@ -384,104 +433,55 @@ components:
       - externalUpdatedAt
       - createdAt
       - updatedAt
-    Error:
-      type: object
-      description: Standard error response
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
-          type: string
-          description: 'Request trace identifier for correlating this error with server
+  responses:
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
+    RateLimitExceeded:
+      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
 
-            logs and support requests. Present whenever the request carried a
+        rate limit (see headers in the rate-limiting section) or an
 
-            trace context (the normal case); omitted otherwise.
+        upstream CRM (Salesforce / HubSpot) rate limit hit while
 
-            '
-          example: abc123def456
-    ReferenceObject:
-      type: object
-      description: A reference to a related resource
-      properties:
-        id:
-          type: string
-          description: Unique identifier of the referenced resource
-          example: 550e8400-e29b-41d4-a716-446655440000
-        _href:
-          type: string
-          description: API path to the referenced resource
-          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
-      required:
-      - id
-      - _href
-    CreateNoteRequest:
-      type: object
-      description: Request body for creating a CRM note.
-      additionalProperties: false
-      properties:
-        data:
-          type: object
-          additionalProperties: false
-          properties:
-            text:
-              type: string
-              minLength: 1
-              maxLength: 65535
-              description: Note body text. Must contain at least one non-whitespace character.
-              example: Follow up after legal review.
-            integrationType:
-              $ref: '#/components/schemas/CrmNoteIntegrationType'
-          required:
-          - text
-          - integrationType
-      required:
-      - data
-    NoCrmConnectionError:
-      type: object
-      description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
+        servicing the request. Retry after the `Retry-After` interval.
 
         '
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-              - NO_CRM_CONNECTION
-              example: NO_CRM_CONNECTION
-            message:
-              type: string
-              description: Human-readable remediation text; display-only (do not parse).
-              example: Your salesforce connection is no longer valid. Reconnect salesforce in Nooks.
-            integrationType:
-              $ref: '#/components/schemas/SyncableCrmType'
-          required:
-          - code
-          - message
-          - integrationType
-        traceId:
-          type: string
-          description: Request trace id, for correlating with Nooks support.
-          example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
-      required:
-      - error
-    SyncableCrmType:
-      type: string
-      enum:
-      - salesforce
-      - hubspot
-      description: The CRM integration to sync from.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Rate limit exceeded
   securitySchemes:
     BearerAuth:
       type: http

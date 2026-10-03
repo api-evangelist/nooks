@@ -348,6 +348,118 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 components:
+  parameters:
+    PageAfter:
+      name: page[after]
+      in: query
+      description: 'Cursor for fetching the next page. Opaque token returned by the
+
+        API in `links.next`; callers should treat it as opaque and only
+
+        pass values they received from a previous response. Malformed
+
+        cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    FilterId:
+      name: filter[id]
+      in: query
+      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
+      required: false
+      schema:
+        type: string
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
+      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
+    FilterUpdatedAtLt:
+      name: filter[updatedAt][lt]
+      in: query
+      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2026-01-01T00:00:00Z'
+    PageSize:
+      name: page[size]
+      in: query
+      description: Number of items per page (max 100)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      example: 50
+    FilterUpdatedAtGte:
+      name: filter[updatedAt][gte]
+      in: query
+      description: Filter by minimum updatedAt (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2025-01-01T00:00:00Z'
+    PageBefore:
+      name: page[before]
+      in: query
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+  responses:
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid page[after] cursor
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
   schemas:
     Error:
       type: object
@@ -389,6 +501,33 @@ components:
       required:
       - id
       - _href
+    PaginationLinks:
+      type: object
+      description: 'Pagination links for navigating through results.
+
+        Links are returned as relative references (path + query) that
+
+        should be resolved against the base URL of the request.
+
+        '
+      properties:
+        first:
+          type: string
+          format: uri-reference
+          description: URL for the first page
+          example: /v1/sequences?page[size]=50
+        prev:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the previous page (null if on first page)
+          example: null
+        next:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the next page (null if on last page)
+          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
     Call:
       type: object
       description: A call record
@@ -506,145 +645,6 @@ components:
       - owner
       - createdAt
       - updatedAt
-    PaginationLinks:
-      type: object
-      description: 'Pagination links for navigating through results.
-
-        Links are returned as relative references (path + query) that
-
-        should be resolved against the base URL of the request.
-
-        '
-      properties:
-        first:
-          type: string
-          format: uri-reference
-          description: URL for the first page
-          example: /v1/sequences?page[size]=50
-        prev:
-          type: string
-          format: uri-reference
-          nullable: true
-          description: URL for the previous page (null if on first page)
-          example: null
-        next:
-          type: string
-          format: uri-reference
-          nullable: true
-          description: URL for the next page (null if on last page)
-          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-  parameters:
-    PageSize:
-      name: page[size]
-      in: query
-      description: Number of items per page (max 100)
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 50
-      example: 50
-    FilterId:
-      name: filter[id]
-      in: query
-      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
-      required: false
-      schema:
-        type: string
-        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
-      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
-    FilterUpdatedAtGte:
-      name: filter[updatedAt][gte]
-      in: query
-      description: Filter by minimum updatedAt (ISO 8601 datetime)
-      required: false
-      schema:
-        type: string
-        format: date-time
-      example: '2025-01-01T00:00:00Z'
-    FilterUpdatedAtLt:
-      name: filter[updatedAt][lt]
-      in: query
-      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
-      required: false
-      schema:
-        type: string
-        format: date-time
-      example: '2026-01-01T00:00:00Z'
-    PageBefore:
-      name: page[before]
-      in: query
-      description: 'Cursor for fetching the previous page. Opaque token returned by
-
-        the API in `links.prev`; callers should treat it as opaque and
-
-        only pass values they received from a previous response.
-
-        Malformed cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    PageAfter:
-      name: page[after]
-      in: query
-      description: 'Cursor for fetching the next page. Opaque token returned by the
-
-        API in `links.next`; callers should treat it as opaque and only
-
-        pass values they received from a previous response. Malformed
-
-        cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-  responses:
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid page[after] cursor
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: NOT_FOUND
-              message: The requested resource was not found
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
-    InternalError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: INTERNAL_ERROR
-              message: An unexpected error occurred
   securitySchemes:
     BearerAuth:
       type: http
