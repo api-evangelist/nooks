@@ -1,0 +1,25 @@
+slug: nooks
+provider: Nooks
+generated_by: planning/capability-mapping/scripts/classify_capabilities.py
+model: claude-opus-5
+frame:
+- Software & Technology
+min_confidence: 0.7
+capability_model:
+  source: https://github.com/vincentmakes/turbo-ea-capabilities
+  license: CC-BY-4.0
+  attribution: Turbo EA Capabilities by Vincent Verdet — Turbo EA, https://github.com/vincentmakes/turbo-ea-capabilities,
+    CC BY 4.0
+  notice: NOTICE
+edge_count: 1
+edges:
+- tag: Prospects
+  spec_file: nooks-prospects-api-openapi.yml
+  capability_id: BC-410.30
+  capability_id_l1: BC-410
+  capability_name: Opportunity & Pipeline Management
+  confidence: 0.7
+  evidence: GET /prospects listProspects 'List prospects'; POST /integrations/prospects/sync 'Sync prospects
+    from CRM'
+  reason: Prospect records sourced from CRM are leads in the sales pipeline; this is lead/opportunity
+    lifecycle data for an outbound sales engagement platform.
