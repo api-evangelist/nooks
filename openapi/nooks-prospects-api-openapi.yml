@@ -358,6 +358,84 @@ paths:
           $ref: '#/components/responses/InternalError'
 components:
   schemas:
+    SyncProspectsRequest:
+      type: object
+      description: Request body for POST /integrations/prospects/sync.
+      additionalProperties: false
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            type:
+              $ref: '#/components/schemas/SyncableCrmType'
+            records:
+              type: array
+              minItems: 1
+              maxItems: 100
+              description: External ids of the CRM records to sync.
+              items:
+                type: string
+                minLength: 1
+                description: The CRM record's external id (Salesforce Contact/Lead Id, or HubSpot contact id).
+                example: 003ABC123DEF456
+          required:
+          - type
+          - records
+      required:
+      - data
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
+    PaginationLinks:
+      type: object
+      description: 'Pagination links for navigating through results.
+
+        Links are returned as relative references (path + query) that
+
+        should be resolved against the base URL of the request.
+
+        '
+      properties:
+        first:
+          type: string
+          format: uri-reference
+          description: URL for the first page
+          example: /v1/sequences?page[size]=50
+        prev:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the previous page (null if on first page)
+          example: null
+        next:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the next page (null if on last page)
+          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
     SyncProspectError:
       type: object
       description: Per-record failure entry from a sync call.
@@ -405,74 +483,12 @@ components:
       - externalId
       - prospectId
       - created
-    Error:
-      type: object
-      description: Standard error response
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
-          type: string
-          description: 'Request trace identifier for correlating this error with server
-
-            logs and support requests. Present whenever the request carried a
-
-            trace context (the normal case); omitted otherwise.
-
-            '
-          example: abc123def456
-    SyncProspectsResponse:
-      type: object
-      description: Response body for POST /integrations/prospects/sync.
-      properties:
-        results:
-          type: array
-          description: Successfully-synced records. Order is not guaranteed.
-          items:
-            $ref: '#/components/schemas/SyncProspectResult'
-        errors:
-          type: array
-          description: Per-record failures. Empty when every record succeeded.
-          items:
-            $ref: '#/components/schemas/SyncProspectError'
-      required:
-      - results
-      - errors
-    SyncProspectsRequest:
-      type: object
-      description: Request body for POST /integrations/prospects/sync.
-      additionalProperties: false
-      properties:
-        data:
-          type: object
-          additionalProperties: false
-          properties:
-            type:
-              $ref: '#/components/schemas/SyncableCrmType'
-            records:
-              type: array
-              minItems: 1
-              maxItems: 100
-              description: External ids of the CRM records to sync.
-              items:
-                type: string
-                minLength: 1
-                description: The CRM record's external id (Salesforce Contact/Lead Id, or HubSpot contact id).
-                example: 003ABC123DEF456
-          required:
-          - type
-          - records
-      required:
-      - data
+    SyncableCrmType:
+      type: string
+      enum:
+      - salesforce
+      - hubspot
+      description: The CRM integration to sync from.
     Prospect:
       type: object
       description: A sales prospect
@@ -552,39 +568,38 @@ components:
       - sequenceStates
       - createdAt
       - updatedAt
-    SyncableCrmType:
-      type: string
-      enum:
-      - salesforce
-      - hubspot
-      description: The CRM integration to sync from.
-    PaginationLinks:
+    SyncProspectsResponse:
       type: object
-      description: 'Pagination links for navigating through results.
-
-        Links are returned as relative references (path + query) that
-
-        should be resolved against the base URL of the request.
-
-        '
+      description: Response body for POST /integrations/prospects/sync.
       properties:
-        first:
+        results:
+          type: array
+          description: Successfully-synced records. Order is not guaranteed.
+          items:
+            $ref: '#/components/schemas/SyncProspectResult'
+        errors:
+          type: array
+          description: Per-record failures. Empty when every record succeeded.
+          items:
+            $ref: '#/components/schemas/SyncProspectError'
+      required:
+      - results
+      - errors
+    ReferenceObject:
+      type: object
+      description: A reference to a related resource
+      properties:
+        id:
           type: string
-          format: uri-reference
-          description: URL for the first page
-          example: /v1/sequences?page[size]=50
-        prev:
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
           type: string
-          format: uri-reference
-          nullable: true
-          description: URL for the previous page (null if on first page)
-          example: null
-        next:
-          type: string
-          format: uri-reference
-          nullable: true
-          description: URL for the next page (null if on last page)
-          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
     NoCrmConnectionError:
       type: object
       description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
@@ -615,38 +630,7 @@ components:
           example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
       required:
       - error
-    ReferenceObject:
-      type: object
-      description: A reference to a related resource
-      properties:
-        id:
-          type: string
-          description: Unique identifier of the referenced resource
-          example: 550e8400-e29b-41d4-a716-446655440000
-        _href:
-          type: string
-          description: API path to the referenced resource
-          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
-      required:
-      - id
-      - _href
   parameters:
-    PageBefore:
-      name: page[before]
-      in: query
-      description: 'Cursor for fetching the previous page. Opaque token returned by
-
-        the API in `links.prev`; callers should treat it as opaque and
-
-        only pass values they received from a previous response.
-
-        Malformed cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
     PageAfter:
       name: page[after]
       in: query
@@ -663,6 +647,31 @@ components:
       schema:
         type: string
       example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    PageBefore:
+      name: page[before]
+      in: query
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    FilterId:
+      name: filter[id]
+      in: query
+      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
+      required: false
+      schema:
+        type: string
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
+      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
     PageSize:
       name: page[size]
       in: query
@@ -674,36 +683,7 @@ components:
         maximum: 100
         default: 50
       example: 50
-    FilterId:
-      name: filter[id]
-      in: query
-      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
-      required: false
-      schema:
-        type: string
-        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
-      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
   responses:
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: NOT_FOUND
-              message: The requested resource was not found
-    InternalError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: INTERNAL_ERROR
-              message: An unexpected error occurred
     BadRequest:
       description: Bad request - invalid parameters
       content:
@@ -714,16 +694,26 @@ components:
             error:
               code: BAD_REQUEST
               message: Invalid page[after] cursor
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
+    InternalError:
+      description: Internal server error
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
             error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
     RateLimitExceeded:
       description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
 
@@ -742,6 +732,16 @@ components:
             error:
               code: RATE_LIMIT_EXCEEDED
               message: Rate limit exceeded
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
   securitySchemes:
     BearerAuth:
       type: http

@@ -280,6 +280,18 @@ components:
           - integrationType
       required:
       - data
+    SyncableCrmType:
+      type: string
+      enum:
+      - salesforce
+      - hubspot
+      description: The CRM integration to sync from.
+    CrmNoteIntegrationType:
+      type: string
+      enum:
+      - salesforce
+      - hubspot
+      description: The CRM integration where the note should be created.
     Error:
       type: object
       description: Standard error response
@@ -305,48 +317,6 @@ components:
 
             '
           example: abc123def456
-    CrmNoteIntegrationType:
-      type: string
-      enum:
-      - salesforce
-      - hubspot
-      description: The CRM integration where the note should be created.
-    NoCrmConnectionError:
-      type: object
-      description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
-
-        '
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-              - NO_CRM_CONNECTION
-              example: NO_CRM_CONNECTION
-            message:
-              type: string
-              description: Human-readable remediation text; display-only (do not parse).
-              example: Your salesforce connection is no longer valid. Reconnect salesforce in Nooks.
-            integrationType:
-              $ref: '#/components/schemas/SyncableCrmType'
-          required:
-          - code
-          - message
-          - integrationType
-        traceId:
-          type: string
-          description: Request trace id, for correlating with Nooks support.
-          example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
-      required:
-      - error
-    SyncableCrmType:
-      type: string
-      enum:
-      - salesforce
-      - hubspot
-      description: The CRM integration to sync from.
     ReferenceObject:
       type: object
       description: A reference to a related resource
@@ -433,37 +403,37 @@ components:
       - externalUpdatedAt
       - createdAt
       - updatedAt
+    NoCrmConnectionError:
+      type: object
+      description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
+
+        '
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+              - NO_CRM_CONNECTION
+              example: NO_CRM_CONNECTION
+            message:
+              type: string
+              description: Human-readable remediation text; display-only (do not parse).
+              example: Your salesforce connection is no longer valid. Reconnect salesforce in Nooks.
+            integrationType:
+              $ref: '#/components/schemas/SyncableCrmType'
+          required:
+          - code
+          - message
+          - integrationType
+        traceId:
+          type: string
+          description: Request trace id, for correlating with Nooks support.
+          example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
+      required:
+      - error
   responses:
-    InternalError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: INTERNAL_ERROR
-              message: An unexpected error occurred
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: NOT_FOUND
-              message: The requested resource was not found
     RateLimitExceeded:
       description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
 
@@ -482,6 +452,36 @@ components:
             error:
               code: RATE_LIMIT_EXCEEDED
               message: Rate limit exceeded
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
   securitySchemes:
     BearerAuth:
       type: http

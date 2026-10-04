@@ -231,78 +231,34 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 components:
-  parameters:
-    PageAfter:
-      name: page[after]
-      in: query
-      description: 'Cursor for fetching the next page. Opaque token returned by the
-
-        API in `links.next`; callers should treat it as opaque and only
-
-        pass values they received from a previous response. Malformed
-
-        cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    FilterId:
-      name: filter[id]
-      in: query
-      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
-      required: false
-      schema:
-        type: string
-        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
-      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
-    FilterUpdatedAtLt:
-      name: filter[updatedAt][lt]
-      in: query
-      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
-      required: false
-      schema:
-        type: string
-        format: date-time
-      example: '2026-01-01T00:00:00Z'
-    PageSize:
-      name: page[size]
-      in: query
-      description: Number of items per page (max 100)
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 50
-      example: 50
-    FilterUpdatedAtGte:
-      name: filter[updatedAt][gte]
-      in: query
-      description: Filter by minimum updatedAt (ISO 8601 datetime)
-      required: false
-      schema:
-        type: string
-        format: date-time
-      example: '2025-01-01T00:00:00Z'
-    PageBefore:
-      name: page[before]
-      in: query
-      description: 'Cursor for fetching the previous page. Opaque token returned by
-
-        the API in `links.prev`; callers should treat it as opaque and
-
-        only pass values they received from a previous response.
-
-        Malformed cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
   schemas:
+    PaginationLinks:
+      type: object
+      description: 'Pagination links for navigating through results.
+
+        Links are returned as relative references (path + query) that
+
+        should be resolved against the base URL of the request.
+
+        '
+      properties:
+        first:
+          type: string
+          format: uri-reference
+          description: URL for the first page
+          example: /v1/sequences?page[size]=50
+        prev:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the previous page (null if on first page)
+          example: null
+        next:
+          type: string
+          format: uri-reference
+          nullable: true
+          description: URL for the next page (null if on last page)
+          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
     CallAnalytics:
       type: object
       description: 'Lifetime call outcome counts. Within a single step, each enrolled
@@ -364,6 +320,90 @@ components:
       - replied
       - bounced
       - unsubscribed
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
+    ReferenceObject:
+      type: object
+      description: A reference to a related resource
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
+    LinkedInAnalytics:
+      type: object
+      description: 'Lifetime LinkedIn engagement counts for sequence-attributed activity.
+
+        Only activity tied to a sequence task is counted — LinkedIn connections
+
+        imported from the user''s existing network and manually logged activity
+
+        are excluded. Acceptances are discovered by periodic polling from the
+
+        Nooks Chrome extension, so `connectionRequestsAccepted` can lag reality.
+
+        '
+      properties:
+        connectionRequestsSent:
+          type: integer
+          description: Connection requests sent (pending or accepted; withdrawn/failed requests are not counted)
+          example: 96
+        connectionRequestsAccepted:
+          type: integer
+          description: Connection requests accepted
+          example: 31
+        messagesSent:
+          type: integer
+          description: LinkedIn messages sent
+          example: 64
+        repliesReceived:
+          type: integer
+          nullable: true
+          description: 'Inbound LinkedIn replies. Replies can only be attributed at the
+
+            sequence level (via the conversation''s first-reply sequence), so
+
+            this is a number on Sequence analytics and always `null` on
+
+            SequenceStep analytics.
+
+            '
+          example: 12
+      required:
+      - connectionRequestsSent
+      - connectionRequestsAccepted
+      - messagesSent
+      - repliesReceived
     SequenceStep:
       type: object
       description: A step within a sales sequence defining an action to perform
@@ -494,90 +534,6 @@ components:
       - hasAbVariants
       - createdAt
       - updatedAt
-    Error:
-      type: object
-      description: Standard error response
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
-          type: string
-          description: 'Request trace identifier for correlating this error with server
-
-            logs and support requests. Present whenever the request carried a
-
-            trace context (the normal case); omitted otherwise.
-
-            '
-          example: abc123def456
-    LinkedInAnalytics:
-      type: object
-      description: 'Lifetime LinkedIn engagement counts for sequence-attributed activity.
-
-        Only activity tied to a sequence task is counted — LinkedIn connections
-
-        imported from the user''s existing network and manually logged activity
-
-        are excluded. Acceptances are discovered by periodic polling from the
-
-        Nooks Chrome extension, so `connectionRequestsAccepted` can lag reality.
-
-        '
-      properties:
-        connectionRequestsSent:
-          type: integer
-          description: Connection requests sent (pending or accepted; withdrawn/failed requests are not counted)
-          example: 96
-        connectionRequestsAccepted:
-          type: integer
-          description: Connection requests accepted
-          example: 31
-        messagesSent:
-          type: integer
-          description: LinkedIn messages sent
-          example: 64
-        repliesReceived:
-          type: integer
-          nullable: true
-          description: 'Inbound LinkedIn replies. Replies can only be attributed at the
-
-            sequence level (via the conversation''s first-reply sequence), so
-
-            this is a number on Sequence analytics and always `null` on
-
-            SequenceStep analytics.
-
-            '
-          example: 12
-      required:
-      - connectionRequestsSent
-      - connectionRequestsAccepted
-      - messagesSent
-      - repliesReceived
-    ReferenceObject:
-      type: object
-      description: A reference to a related resource
-      properties:
-        id:
-          type: string
-          description: Unique identifier of the referenced resource
-          example: 550e8400-e29b-41d4-a716-446655440000
-        _href:
-          type: string
-          description: API path to the referenced resource
-          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
-      required:
-      - id
-      - _href
     Analytics:
       type: object
       description: 'Channel-grouped engagement counts, returned only when requested via
@@ -624,44 +580,78 @@ components:
       - email
       - calls
       - linkedIn
-    PaginationLinks:
-      type: object
-      description: 'Pagination links for navigating through results.
+  parameters:
+    PageSize:
+      name: page[size]
+      in: query
+      description: Number of items per page (max 100)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      example: 50
+    PageAfter:
+      name: page[after]
+      in: query
+      description: 'Cursor for fetching the next page. Opaque token returned by the
 
-        Links are returned as relative references (path + query) that
+        API in `links.next`; callers should treat it as opaque and only
 
-        should be resolved against the base URL of the request.
+        pass values they received from a previous response. Malformed
+
+        cursors return `400 Bad Request`.
 
         '
-      properties:
-        first:
-          type: string
-          format: uri-reference
-          description: URL for the first page
-          example: /v1/sequences?page[size]=50
-        prev:
-          type: string
-          format: uri-reference
-          nullable: true
-          description: URL for the previous page (null if on first page)
-          example: null
-        next:
-          type: string
-          format: uri-reference
-          nullable: true
-          description: URL for the next page (null if on last page)
-          example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    FilterUpdatedAtGte:
+      name: filter[updatedAt][gte]
+      in: query
+      description: Filter by minimum updatedAt (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2025-01-01T00:00:00Z'
+    PageBefore:
+      name: page[before]
+      in: query
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    FilterId:
+      name: filter[id]
+      in: query
+      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
+      required: false
+      schema:
+        type: string
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
+      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
+    FilterUpdatedAtLt:
+      name: filter[updatedAt][lt]
+      in: query
+      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
+      required: false
+      schema:
+        type: string
+        format: date-time
+      example: '2026-01-01T00:00:00Z'
   responses:
-    InternalError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: INTERNAL_ERROR
-              message: An unexpected error occurred
     BadRequest:
       description: Bad request - invalid parameters
       content:
@@ -682,6 +672,16 @@ components:
             error:
               code: UNAUTHORIZED
               message: Invalid or missing API key
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
     NotFound:
       description: Resource not found
       content:
