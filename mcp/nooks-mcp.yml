@@ -59,3 +59,45 @@ x-evidence:
 - url: https://mcp.nooks.ai/
   status: 0
   note: does not resolve — the MCP host is on nooks.in, not nooks.ai
+rfc9728:
+  endpoint: https://mcp.nooks.in/
+  metadata_url: https://mcp.nooks.in/.well-known/oauth-protected-resource
+  discovered_via: WWW-Authenticate resource_metadata on an anonymous POST initialize
+  fetched: '2026-09-25'
+  http_status: 200
+  content_type: application/json
+  document:
+    resource: https://mcp.nooks.in/
+    authorization_servers:
+    - https://oauth.nooks.in
+    scopes_supported:
+    - sequences:read
+    - emails:read
+    - users:read
+    - sequence-states:read
+    - sequence-states:write
+    - prospects:read
+    - mailboxes:read
+    - calls:read
+    - sequence-steps:read
+    - sequence-steps:write
+    - call-dispositions:read
+    - email-templates:read
+    - tasks:read
+    - tasks:write
+    - search:read
+    - accounts:read
+    - opportunities:read
+    - prospects:write
+    - notes:write
+    - emails:write
+    - calls:write
+    - sequences:write
+    - tags:read
+    - tags:write
+    - coaching:read
+    - teams:read
+    - desktop-notes:read
+    - assistant:read
+    - conversations:read
+    resource_name: Nooks MCP Server
