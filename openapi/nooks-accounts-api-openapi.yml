@@ -210,31 +210,6 @@ components:
           nullable: true
           description: URL for the next page (null if on last page)
           example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    Error:
-      type: object
-      description: Standard error response
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
-          type: string
-          description: 'Request trace identifier for correlating this error with server
-
-            logs and support requests. Present whenever the request carried a
-
-            trace context (the normal case); omitted otherwise.
-
-            '
-          example: abc123def456
     Account:
       type: object
       description: An account (company) record
@@ -289,18 +264,41 @@ components:
       - description
       - createdAt
       - updatedAt
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
   parameters:
-    PageSize:
-      name: page[size]
+    FilterUpdatedAtLt:
+      name: filter[updatedAt][lt]
       in: query
-      description: Number of items per page (max 100)
+      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
       required: false
       schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 50
-      example: 50
+        type: string
+        format: date-time
+      example: '2026-01-01T00:00:00Z'
     PageAfter:
       name: page[after]
       in: query
@@ -326,6 +324,17 @@ components:
         type: string
         format: date-time
       example: '2025-01-01T00:00:00Z'
+    PageSize:
+      name: page[size]
+      in: query
+      description: Number of items per page (max 100)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      example: 50
     PageBefore:
       name: page[before]
       in: query
@@ -342,34 +351,7 @@ components:
       schema:
         type: string
       example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    FilterUpdatedAtLt:
-      name: filter[updatedAt][lt]
-      in: query
-      description: Filter by updatedAt before this timestamp, exclusive (ISO 8601 datetime)
-      required: false
-      schema:
-        type: string
-        format: date-time
-      example: '2026-01-01T00:00:00Z'
   responses:
-    RateLimitExceeded:
-      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
-
-        rate limit (see headers in the rate-limiting section) or an
-
-        upstream CRM (Salesforce / HubSpot) rate limit hit while
-
-        servicing the request. Retry after the `Retry-After` interval.
-
-        '
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: RATE_LIMIT_EXCEEDED
-              message: Rate limit exceeded
     BadRequest:
       description: Bad request - invalid parameters
       content:
@@ -380,16 +362,6 @@ components:
             error:
               code: BAD_REQUEST
               message: Invalid page[after] cursor
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
     InternalError:
       description: Internal server error
       content:
@@ -410,6 +382,34 @@ components:
             error:
               code: NOT_FOUND
               message: The requested resource was not found
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    RateLimitExceeded:
+      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
+
+        rate limit (see headers in the rate-limiting section) or an
+
+        upstream CRM (Salesforce / HubSpot) rate limit hit while
+
+        servicing the request. Retry after the `Retry-After` interval.
+
+        '
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Rate limit exceeded
   securitySchemes:
     BearerAuth:
       type: http

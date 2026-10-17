@@ -358,57 +358,6 @@ paths:
           $ref: '#/components/responses/InternalError'
 components:
   schemas:
-    SyncProspectsRequest:
-      type: object
-      description: Request body for POST /integrations/prospects/sync.
-      additionalProperties: false
-      properties:
-        data:
-          type: object
-          additionalProperties: false
-          properties:
-            type:
-              $ref: '#/components/schemas/SyncableCrmType'
-            records:
-              type: array
-              minItems: 1
-              maxItems: 100
-              description: External ids of the CRM records to sync.
-              items:
-                type: string
-                minLength: 1
-                description: The CRM record's external id (Salesforce Contact/Lead Id, or HubSpot contact id).
-                example: 003ABC123DEF456
-          required:
-          - type
-          - records
-      required:
-      - data
-    Error:
-      type: object
-      description: Standard error response
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
-          type: string
-          description: 'Request trace identifier for correlating this error with server
-
-            logs and support requests. Present whenever the request carried a
-
-            trace context (the normal case); omitted otherwise.
-
-            '
-          example: abc123def456
     PaginationLinks:
       type: object
       description: 'Pagination links for navigating through results.
@@ -436,32 +385,6 @@ components:
           nullable: true
           description: URL for the next page (null if on last page)
           example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    SyncProspectError:
-      type: object
-      description: Per-record failure entry from a sync call.
-      properties:
-        externalId:
-          type: string
-          example: 003ABC123DEF456
-        code:
-          type: string
-          enum:
-          - NOT_FOUND_IN_CRM
-          - MAPPING_FAILED
-          description: '* `NOT_FOUND_IN_CRM` — the CRM had no record for the given `externalId`.
-
-            * `MAPPING_FAILED` — failed to map a Nooks prospect to the CRM record.
-
-            '
-          example: NOT_FOUND_IN_CRM
-        message:
-          type: string
-          description: Human-readable detail.
-          example: No record found in salesforce for externalId 003ABC123DEF456
-      required:
-      - externalId
-      - code
-      - message
     SyncProspectResult:
       type: object
       description: Per-record success entry from a sync call.
@@ -483,12 +406,61 @@ components:
       - externalId
       - prospectId
       - created
-    SyncableCrmType:
-      type: string
-      enum:
-      - salesforce
-      - hubspot
-      description: The CRM integration to sync from.
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
+    NoCrmConnectionError:
+      type: object
+      description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
+
+        '
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+              - NO_CRM_CONNECTION
+              example: NO_CRM_CONNECTION
+            message:
+              type: string
+              description: Human-readable remediation text; display-only (do not parse).
+              example: Your salesforce connection is no longer valid. Reconnect salesforce in Nooks.
+            integrationType:
+              $ref: '#/components/schemas/SyncableCrmType'
+          required:
+          - code
+          - message
+          - integrationType
+        traceId:
+          type: string
+          description: Request trace id, for correlating with Nooks support.
+          example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
+      required:
+      - error
     Prospect:
       type: object
       description: A sales prospect
@@ -568,6 +540,32 @@ components:
       - sequenceStates
       - createdAt
       - updatedAt
+    SyncProspectError:
+      type: object
+      description: Per-record failure entry from a sync call.
+      properties:
+        externalId:
+          type: string
+          example: 003ABC123DEF456
+        code:
+          type: string
+          enum:
+          - NOT_FOUND_IN_CRM
+          - MAPPING_FAILED
+          description: '* `NOT_FOUND_IN_CRM` — the CRM had no record for the given `externalId`.
+
+            * `MAPPING_FAILED` — failed to map a Nooks prospect to the CRM record.
+
+            '
+          example: NOT_FOUND_IN_CRM
+        message:
+          type: string
+          description: Human-readable detail.
+          example: No record found in salesforce for externalId 003ABC123DEF456
+      required:
+      - externalId
+      - code
+      - message
     SyncProspectsResponse:
       type: object
       description: Response body for POST /integrations/prospects/sync.
@@ -585,6 +583,38 @@ components:
       required:
       - results
       - errors
+    SyncableCrmType:
+      type: string
+      enum:
+      - salesforce
+      - hubspot
+      description: The CRM integration to sync from.
+    SyncProspectsRequest:
+      type: object
+      description: Request body for POST /integrations/prospects/sync.
+      additionalProperties: false
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          properties:
+            type:
+              $ref: '#/components/schemas/SyncableCrmType'
+            records:
+              type: array
+              minItems: 1
+              maxItems: 100
+              description: External ids of the CRM records to sync.
+              items:
+                type: string
+                minLength: 1
+                description: The CRM record's external id (Salesforce Contact/Lead Id, or HubSpot contact id).
+                example: 003ABC123DEF456
+          required:
+          - type
+          - records
+      required:
+      - data
     ReferenceObject:
       type: object
       description: A reference to a related resource
@@ -600,36 +630,6 @@ components:
       required:
       - id
       - _href
-    NoCrmConnectionError:
-      type: object
-      description: 'Returned (400) when the requested CRM isn''t usable — never connected, token/session expired/revoked, or the acting user has no connection of their own. `message` carries the remediation, so branch on `code`, not `message`.
-
-        '
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              enum:
-              - NO_CRM_CONNECTION
-              example: NO_CRM_CONNECTION
-            message:
-              type: string
-              description: Human-readable remediation text; display-only (do not parse).
-              example: Your salesforce connection is no longer valid. Reconnect salesforce in Nooks.
-            integrationType:
-              $ref: '#/components/schemas/SyncableCrmType'
-          required:
-          - code
-          - message
-          - integrationType
-        traceId:
-          type: string
-          description: Request trace id, for correlating with Nooks support.
-          example: 6b1c9f2e8d3a4c5b7e9f0a1d2c3b4a5e
-      required:
-      - error
   parameters:
     PageAfter:
       name: page[after]
@@ -641,22 +641,6 @@ components:
         pass values they received from a previous response. Malformed
 
         cursors return `400 Bad Request`.
-
-        '
-      required: false
-      schema:
-        type: string
-      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    PageBefore:
-      name: page[before]
-      in: query
-      description: 'Cursor for fetching the previous page. Opaque token returned by
-
-        the API in `links.prev`; callers should treat it as opaque and
-
-        only pass values they received from a previous response.
-
-        Malformed cursors return `400 Bad Request`.
 
         '
       required: false
@@ -683,7 +667,33 @@ components:
         maximum: 100
         default: 50
       example: 50
+    PageBefore:
+      name: page[before]
+      in: query
+      description: 'Cursor for fetching the previous page. Opaque token returned by
+
+        the API in `links.prev`; callers should treat it as opaque and
+
+        only pass values they received from a previous response.
+
+        Malformed cursors return `400 Bad Request`.
+
+        '
+      required: false
+      schema:
+        type: string
+      example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
   responses:
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
     BadRequest:
       description: Bad request - invalid parameters
       content:
@@ -732,16 +742,6 @@ components:
             error:
               code: RATE_LIMIT_EXCEEDED
               message: Rate limit exceeded
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
   securitySchemes:
     BearerAuth:
       type: http

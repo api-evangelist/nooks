@@ -85,91 +85,22 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 components:
-  responses:
-    RateLimitExceeded:
-      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
-
-        rate limit (see headers in the rate-limiting section) or an
-
-        upstream CRM (Salesforce / HubSpot) rate limit hit while
-
-        servicing the request. Retry after the `Retry-After` interval.
-
-        '
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: RATE_LIMIT_EXCEEDED
-              message: Rate limit exceeded
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid page[after] cursor
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
-    InternalError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: INTERNAL_ERROR
-              message: An unexpected error occurred
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: NOT_FOUND
-              message: The requested resource was not found
   schemas:
-    Error:
+    ReferenceObject:
       type: object
-      description: Standard error response
+      description: A reference to a related resource
       properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
+        id:
           type: string
-          description: 'Request trace identifier for correlating this error with server
-
-            logs and support requests. Present whenever the request carried a
-
-            trace context (the normal case); omitted otherwise.
-
-            '
-          example: abc123def456
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
     EmailTemplate:
       type: object
       description: An email template stored in the workspace. Templates are referenced by sequence steps and contain the body content sent to prospects.
@@ -254,21 +185,90 @@ components:
       - privacy
       - createdAt
       - updatedAt
-    ReferenceObject:
+    Error:
       type: object
-      description: A reference to a related resource
+      description: Standard error response
       properties:
-        id:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
           type: string
-          description: Unique identifier of the referenced resource
-          example: 550e8400-e29b-41d4-a716-446655440000
-        _href:
-          type: string
-          description: API path to the referenced resource
-          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
-      required:
-      - id
-      - _href
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid page[after] cursor
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    RateLimitExceeded:
+      description: 'Rate limit exceeded. May reflect either the per-workspace Nooks
+
+        rate limit (see headers in the rate-limiting section) or an
+
+        upstream CRM (Salesforce / HubSpot) rate limit hit while
+
+        servicing the request. Retry after the `Retry-After` interval.
+
+        '
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Rate limit exceeded
   securitySchemes:
     BearerAuth:
       type: http

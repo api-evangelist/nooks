@@ -953,6 +953,21 @@ components:
           nullable: true
           description: URL for the next page (null if on last page)
           example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+    ReferenceObject:
+      type: object
+      description: A reference to a related resource
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the referenced resource
+          example: 550e8400-e29b-41d4-a716-446655440000
+        _href:
+          type: string
+          description: API path to the referenced resource
+          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
+      required:
+      - id
+      - _href
     Error:
       type: object
       description: Standard error response
@@ -978,21 +993,6 @@ components:
 
             '
           example: abc123def456
-    ReferenceObject:
-      type: object
-      description: A reference to a related resource
-      properties:
-        id:
-          type: string
-          description: Unique identifier of the referenced resource
-          example: 550e8400-e29b-41d4-a716-446655440000
-        _href:
-          type: string
-          description: API path to the referenced resource
-          example: /v1/sequences/550e8400-e29b-41d4-a716-446655440000
-      required:
-      - id
-      - _href
     Task:
       type: object
       description: A task representing an outreach activity assigned to a user
@@ -1119,70 +1119,16 @@ components:
       - sequenceStep
       - createdAt
       - updatedAt
-  responses:
-    UnprocessableEntity:
-      description: 'Unprocessable entity - the request was well-formed but cannot be
-
-        processed. Typical causes: a referenced resource (prospect, sequence,
-
-        sequence step) does not exist or is in a state that prevents the
-
-        operation; a sequence-step task is missing required associations;
-
-        scheduling exceeds the 30-day limit.
-
-        '
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNPROCESSABLE_ENTITY
-              message: Unprocessable entity
-              details:
-                message: Referenced prospect does not exist
-    BadRequest:
-      description: Bad request - invalid parameters
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: BAD_REQUEST
-              message: Invalid page[after] cursor
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
-    InternalError:
-      description: Internal server error
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: INTERNAL_ERROR
-              message: An unexpected error occurred
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: NOT_FOUND
-              message: The requested resource was not found
   parameters:
+    FilterId:
+      name: filter[id]
+      in: query
+      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
+      required: false
+      schema:
+        type: string
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
+      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
     PageSize:
       name: page[size]
       in: query
@@ -1210,15 +1156,6 @@ components:
       schema:
         type: string
       example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    FilterId:
-      name: filter[id]
-      in: query
-      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
-      required: false
-      schema:
-        type: string
-        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
-      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
     PageBefore:
       name: page[before]
       in: query
@@ -1235,6 +1172,69 @@ components:
       schema:
         type: string
       example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
+  responses:
+    BadRequest:
+      description: Bad request - invalid parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid page[after] cursor
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
+    UnprocessableEntity:
+      description: 'Unprocessable entity - the request was well-formed but cannot be
+
+        processed. Typical causes: a referenced resource (prospect, sequence,
+
+        sequence step) does not exist or is in a state that prevents the
+
+        operation; a sequence-step task is missing required associations;
+
+        scheduling exceeds the 30-day limit.
+
+        '
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNPROCESSABLE_ENTITY
+              message: Unprocessable entity
+              details:
+                message: Referenced prospect does not exist
   securitySchemes:
     BearerAuth:
       type: http

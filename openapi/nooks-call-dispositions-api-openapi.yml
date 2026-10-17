@@ -190,31 +190,6 @@ components:
           nullable: true
           description: URL for the next page (null if on last page)
           example: /v1/sequences?page[size]=50&page[after]=eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    Error:
-      type: object
-      description: Standard error response
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-              description: Error code
-              example: NOT_FOUND
-            message:
-              type: string
-              description: Human-readable error message
-              example: The requested resource was not found
-        traceId:
-          type: string
-          description: 'Request trace identifier for correlating this error with server
-
-            logs and support requests. Present whenever the request carried a
-
-            trace context (the normal case); omitted otherwise.
-
-            '
-          example: abc123def456
     CallDisposition:
       type: object
       description: A call disposition definition used to categorize call outcomes
@@ -254,7 +229,41 @@ components:
       - order
       - createdAt
       - updatedAt
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error message
+              example: The requested resource was not found
+        traceId:
+          type: string
+          description: 'Request trace identifier for correlating this error with server
+
+            logs and support requests. Present whenever the request carried a
+
+            trace context (the normal case); omitted otherwise.
+
+            '
+          example: abc123def456
   parameters:
+    FilterId:
+      name: filter[id]
+      in: query
+      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
+      required: false
+      schema:
+        type: string
+        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
+      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
     PageSize:
       name: page[size]
       in: query
@@ -282,15 +291,6 @@ components:
       schema:
         type: string
       example: eyJpZCI6IjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTQ0NjY1NTQ0MDAwMCIsInYiOjF9
-    FilterId:
-      name: filter[id]
-      in: query
-      description: Filter by IDs (comma-separated UUIDs). An empty value is treated as "no filter".
-      required: false
-      schema:
-        type: string
-        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(,[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})*)?$
-      example: 550e8400-e29b-41d4-a716-446655440000,660e8400-e29b-41d4-a716-446655440001
     PageBefore:
       name: page[before]
       in: query
@@ -318,16 +318,6 @@ components:
             error:
               code: BAD_REQUEST
               message: Invalid page[after] cursor
-    Unauthorized:
-      description: Unauthorized - invalid or missing API key
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error:
-              code: UNAUTHORIZED
-              message: Invalid or missing API key
     InternalError:
       description: Internal server error
       content:
@@ -348,6 +338,16 @@ components:
             error:
               code: NOT_FOUND
               message: The requested resource was not found
+    Unauthorized:
+      description: Unauthorized - invalid or missing API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or missing API key
   securitySchemes:
     BearerAuth:
       type: http
